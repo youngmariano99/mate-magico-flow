@@ -1,23 +1,11 @@
-import { useEffect, useState } from "react";
-import type { DTO_PerfilGamificacion } from "@/types/dominio";
-import { obtenerPerfilGamificacion } from "@/services/mocks/gamificacionRepository";
+import { useGamificacionStore } from "@/stores/gamificacionStore";
 
+/**
+ * Acceso al perfil gamificado. `cargando` es false una vez que Zustand
+ * rehidrató el store desde localStorage.
+ */
 export const useGamificacion = () => {
-  const [perfil, setPerfil] = useState<DTO_PerfilGamificacion | null>(null);
-  const [cargando, setCargando] = useState<boolean>(true);
-
-  useEffect(() => {
-    let activo = true;
-    void obtenerPerfilGamificacion().then((p) => {
-      if (activo) {
-        setPerfil(p);
-        setCargando(false);
-      }
-    });
-    return () => {
-      activo = false;
-    };
-  }, []);
-
-  return { perfil, cargando };
+  const perfil = useGamificacionStore((s) => s.perfil);
+  const hidratado = useGamificacionStore((s) => s.hidratado);
+  return { perfil, cargando: !hidratado };
 };

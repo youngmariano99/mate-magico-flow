@@ -1,13 +1,14 @@
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 import type {
   CategoriaPARA,
   DTO_RespuestaProcesamientoIA,
 } from "@/types/dominio";
 
 /**
- * Hook que simula el procesamiento de IA (Groq). La salida está estrictamente
- * tipada como DTO_RespuestaProcesamientoIA: cualquier campo extra o faltante
- * sería un bug visible en tiempo de compilación.
+ * Hook que simula el procesamiento de IA (Groq) y dispara feedback toast.
+ * La salida está estrictamente tipada como DTO_RespuestaProcesamientoIA
+ * para impedir alucinaciones estructurales.
  *
  * Precondición: `texto` no vacío.
  */
@@ -59,6 +60,9 @@ export const useProcesadorMagico = () => {
       }
 
       setEstado({ procesando: true, ultimaRespuesta: null, error: null });
+      const idToast = toast.loading("Procesando con IA...", {
+        description: `"${limpio.slice(0, 60)}${limpio.length > 60 ? "…" : ""}"`,
+      });
 
       return new Promise((resolve) => {
         setTimeout(() => {
@@ -71,6 +75,10 @@ export const useProcesadorMagico = () => {
             confianza,
           };
           setEstado({ procesando: false, ultimaRespuesta: respuesta, error: null });
+          toast.success(`✨ Agregado a ${categoria}`, {
+            id: idToast,
+            description: `${limpio}${tags.length ? ` · ${tags.map((t) => `#${t}`).join(" ")}` : ""}`,
+          });
           resolve(respuesta);
         }, 1000);
       });

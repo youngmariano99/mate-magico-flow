@@ -1,45 +1,38 @@
 import { useCallback, useEffect, useState } from "react";
-import type { DTO_Tarea, CategoriaPARA, EstadoTarea } from "@/types/dominio";
-import {
-  agregarTarea,
-  cambiarEstadoTarea,
-  obtenerTodasLasTareas,
-} from "@/services/mocks/tareasRepository";
+import { useTareasStore } from "@/stores/tareasStore";
+import type { CategoriaPARA, EstadoTarea } from "@/types/dominio";
 
 /**
- * Hook de orquestación de tareas. Encapsula el ciclo carga → mutación → recarga
+ * Hook de orquestación. Encapsula latencia mockeada del store de Zustand
  * para que los componentes de UI permanezcan puramente presentacionales.
  */
 export const useTareas = () => {
-  const [tareas, setTareas] = useState<DTO_Tarea[]>([]);
-  const [cargando, setCargando] = useState<boolean>(true);
-
-  const recargar = useCallback(async () => {
-    setCargando(true);
-    const datos = await obtenerTodasLasTareas();
-    setTareas(datos);
-    setCargando(false);
-  }, []);
+  const tareas = useTareasStore((s) => s.tareas);
+  const hidratado = useTareasStore((s) => s.hidratado);
+  const agregar = useTareasStore((s) => s.agregar);
+  const cambiarEstado = useTareasStore((s) => s.cambiarEstado);
+  const [cargando, setCargando] = useState<boolean>(!hidratado);
 
   useEffect(() => {
-    void recargar();
-  }, [recargar]);
+    if (hidratado) {
+      const t = setTimeout(() => setCargando(false), 200);
+      return () => clearTimeout(t);
+    }
+  }, [hidratado]);
 
   const crear = useCallback(
     async (titulo: string, categoria: CategoriaPARA, puntosExperiencia = 10) => {
-      await agregarTarea({ titulo, categoria, puntosExperiencia });
-      await recargar();
+      await agregar({ titulo, categoria, puntosExperiencia });
     },
-    [recargar],
+    [agregar],
   );
 
   const actualizarEstado = useCallback(
     async (id: string, estado: EstadoTarea) => {
-      await cambiarEstadoTarea(id, estado);
-      await recargar();
+      await cambiarEstado(id, estado);
     },
-    [recargar],
+    [cambiarEstado],
   );
 
-  return { tareas, cargando, crear, actualizarEstado, recargar };
+  return { tareas, cargando, crear, actualizarEstado };
 };

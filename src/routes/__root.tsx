@@ -7,8 +7,13 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Toaster } from "sonner";
+import { AuthProvider } from "@/auth/AuthProvider";
+import { registrarServiceWorker } from "@/pwa/registrarServiceWorker";
 
 import appCss from "../styles.css?url";
+
 
 function NotFoundComponent() {
   return (
@@ -95,9 +100,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="es-AR">
       <head>
         <HeadContent />
+        <link rel="manifest" href="/manifest.webmanifest" />
       </head>
       <body>
         {children}
@@ -110,9 +116,28 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    registrarServiceWorker();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <AuthProvider>
+        <Outlet />
+        <Toaster
+          position="top-right"
+          theme="dark"
+          richColors
+          toastOptions={{
+            style: {
+              background: "var(--surface-elevated)",
+              border: "1px solid var(--border)",
+              color: "var(--foreground)",
+            },
+          }}
+        />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
+
