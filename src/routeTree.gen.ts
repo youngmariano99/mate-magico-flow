@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as EvolucionRouteImport } from './routes/evolucion'
 import { Route as BaulRouteImport } from './routes/baul'
 import { Route as IndexRouteImport } from './routes/index'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EvolucionRoute = EvolucionRouteImport.update({
   id: '/evolucion',
   path: '/evolucion',
@@ -33,34 +39,45 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/baul': typeof BaulRoute
   '/evolucion': typeof EvolucionRoute
+  '/login': typeof LoginRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/baul': typeof BaulRoute
   '/evolucion': typeof EvolucionRoute
+  '/login': typeof LoginRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/baul': typeof BaulRoute
   '/evolucion': typeof EvolucionRoute
+  '/login': typeof LoginRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/baul' | '/evolucion'
+  fullPaths: '/' | '/baul' | '/evolucion' | '/login'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/baul' | '/evolucion'
-  id: '__root__' | '/' | '/baul' | '/evolucion'
+  to: '/' | '/baul' | '/evolucion' | '/login'
+  id: '__root__' | '/' | '/baul' | '/evolucion' | '/login'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BaulRoute: typeof BaulRoute
   EvolucionRoute: typeof EvolucionRoute
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/evolucion': {
       id: '/evolucion'
       path: '/evolucion'
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BaulRoute: BaulRoute,
   EvolucionRoute: EvolucionRoute,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
