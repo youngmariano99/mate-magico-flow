@@ -75,17 +75,8 @@ export const VistaBaul = ({ tareas, cargando }: PropsVistaBaul) => {
             <div className="grid sm:grid-cols-2 gap-3">
               {items.map((t) => {
                 const visualizable = ES_VISUALIZABLE(t.categoria);
-                const Wrapper = visualizable ? "button" : "div";
-                return (
-                  <Wrapper
-                    key={t.id}
-                    {...(visualizable
-                      ? { type: "button" as const, onClick: () => setSeleccionada(t) }
-                      : {})}
-                    className={`surface-card p-4 text-left w-full transition-colors ${
-                      visualizable ? "hover:border-primary/60 cursor-pointer" : ""
-                    }`}
-                  >
+                const contenido = (
+                  <>
                     <p className="font-medium">{t.titulo}</p>
                     {t.etiquetas && t.etiquetas.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1">
@@ -103,7 +94,21 @@ export const VistaBaul = ({ tareas, cargando }: PropsVistaBaul) => {
                         <span className="text-primary">+{t.puntosExperiencia} XP</span>
                       </span>
                     </div>
-                  </Wrapper>
+                  </>
+                );
+                return visualizable ? (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setSeleccionada(t)}
+                    className="surface-card p-4 text-left w-full transition-colors hover:border-primary/60 cursor-pointer"
+                  >
+                    {contenido}
+                  </button>
+                ) : (
+                  <div key={t.id} className="surface-card p-4 text-left w-full">
+                    {contenido}
+                  </div>
                 );
               })}
             </div>
