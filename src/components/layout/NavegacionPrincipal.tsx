@@ -82,7 +82,7 @@ export const BarraInferior = () => {
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label="Navegación principal"
     >
-      <ul className="grid grid-cols-3">
+      <ul className="grid grid-cols-4">
         {ITEMS.map(({ to, label, Icon }) => {
           const activo = pathname === to;
           return (
