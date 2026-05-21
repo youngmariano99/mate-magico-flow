@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { CategoriaPARA, DTO_Tarea } from "@/types/dominio";
+import { VisorRecursoSheet } from "@/components/baul/VisorRecursoSheet";
 
 interface PropsVistaBaul {
   tareas: ReadonlyArray<DTO_Tarea>;
@@ -14,11 +15,14 @@ const CATEGORIAS_VISIBLES: ReadonlyArray<{ key: CategoriaPARA | "Todas"; label: 
   { key: "Archivo", label: "Archivo" },
 ];
 
+const ES_VISUALIZABLE = (c: CategoriaPARA): boolean => c === "Recurso" || c === "Proyecto";
+
 /**
- * El Baúl — Gestor PARA. Agrupa las tareas por categoría con filtros rápidos.
+ * El Baúl — Gestor PARA. Click en Proyecto/Recurso abre el Visor del Segundo Cerebro.
  */
 export const VistaBaul = ({ tareas, cargando }: PropsVistaBaul) => {
   const [filtro, setFiltro] = useState<CategoriaPARA | "Todas">("Todas");
+  const [seleccionada, setSeleccionada] = useState<DTO_Tarea | null>(null);
 
   const filtradas = useMemo(
     () => (filtro === "Todas" ? tareas : tareas.filter((t) => t.categoria === filtro)),
@@ -69,21 +73,53 @@ export const VistaBaul = ({ tareas, cargando }: PropsVistaBaul) => {
               <span className="text-xs text-muted-foreground">{items.length}</span>
             </h3>
             <div className="grid sm:grid-cols-2 gap-3">
-              {items.map((t) => (
-                <article key={t.id} className="surface-card p-4 hover:border-primary/40 transition-colors">
-                  <p className="font-medium">{t.titulo}</p>
-                  <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{t.areaVinculadaId ?? "sin área"}</span>
-                    <span className="flex items-center gap-2">
-                      <EstadoChip estado={t.estado} />
-                      <span className="text-primary">+{t.puntosExperiencia} XP</span>
-                    </span>
+              {items.map((t) => {
+                const visualizable = ES_VISUALIZABLE(t.categoria);
+                const contenido = (
+                  <>
+                    <p className="font-medium">{t.titulo}</p>
+                    {t.etiquetas && t.etiquetas.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {t.etiquetas.slice(0, 3).map((e) => (
+                          <span key={e} className="text-[10px] text-primary/80">
+                            {e}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{t.areaVinculadaId ?? "sin área"}</span>
+                      <span className="flex items-center gap-2">
+                        <EstadoChip estado={t.estado} />
+                        <span className="text-primary">+{t.puntosExperiencia} XP</span>
+                      </span>
+                    </div>
+                  </>
+                );
+                return visualizable ? (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setSeleccionada(t)}
+                    className="surface-card p-4 text-left w-full transition-colors hover:border-primary/60 cursor-pointer"
+                  >
+                    {contenido}
+                  </button>
+                ) : (
+                  <div key={t.id} className="surface-card p-4 text-left w-full">
+                    {contenido}
                   </div>
-                </article>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
+
+      <VisorRecursoSheet
+        tarea={seleccionada}
+        abierto={seleccionada !== null}
+        onCerrar={() => setSeleccionada(null)}
+      />
     </section>
   );
 };

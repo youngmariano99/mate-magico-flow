@@ -14,6 +14,12 @@ export interface DTO_Tarea {
   estado: EstadoTarea;
   fechaCreacion: string;
   puntosExperiencia: number;
+  /** Fecha ISO (YYYY-MM-DD) en la que la tarea fue planificada. Si es null/undefined, vive en el Backlog. */
+  fechaProgramada?: string | null;
+  /** Etiquetas libres usadas por el Segundo Cerebro. */
+  etiquetas?: ReadonlyArray<string>;
+  /** Contenido extendido (markdown) editable desde el Visor del Segundo Cerebro. */
+  notasMarkdown?: string;
 }
 
 export interface DTO_RespuestaProcesamientoIA {
@@ -45,12 +51,25 @@ export interface DTO_Usuario {
 }
 
 /**
- * Sesión activa. Forma compatible con `Session` de Supabase Auth para que
- * el día de mañana se reemplace el adapter sin tocar consumidores.
+ * Sesión activa. Forma compatible con `Session` de Supabase Auth.
  */
 export interface DTO_Sesion {
   accessToken: string;
   refreshToken: string;
-  expiraEn: number; // epoch ms
+  expiraEn: number;
   usuario: DTO_Usuario;
+}
+
+/**
+ * Hábito atómico. Distinto a una tarea: se repite a diario y acumula racha.
+ * Espejo futuro de la tabla `habitos` + `habitos_registros`.
+ */
+export interface DTO_Habito {
+  id: string;
+  titulo: string;
+  area: string;
+  rachaActual: number;
+  completadoHoy: boolean;
+  /** XP otorgado cada vez que se completa. */
+  xpPorCompletar: number;
 }

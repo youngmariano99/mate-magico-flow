@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { NavegacionPrincipal, BarraInferior } from "@/components/layout/NavegacionPrincipal";
 import { PanelGamificacion } from "@/components/dashboard/PanelGamificacion";
 import { ListaMITs } from "@/components/dashboard/ListaMITs";
+import { PanelHabitosDiarios } from "@/components/dashboard/PanelHabitosDiarios";
 import { InputMagico } from "@/components/dashboard/InputMagico";
 import { GuardiaSesion } from "@/auth/GuardiaSesion";
 import { useTareas } from "@/hooks/useTareas";
@@ -53,6 +54,7 @@ function DashboardContenido() {
         </div>
         <PanelGamificacion />
         <ListaMITs tareas={tareas} cargando={cargando} onCompletar={(id) => void completar(id)} />
+        <PanelHabitosDiarios />
       </main>
       <div className="fixed inset-x-0 z-30 bg-gradient-to-t from-background via-background/95 to-transparent pt-6 pb-5 bottom-[72px] md:bottom-0">
         <div className="mx-auto max-w-5xl px-5">

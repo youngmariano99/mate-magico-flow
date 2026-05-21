@@ -1,0 +1,117 @@
+import { useEffect, useState } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useTareasStore } from "@/stores/tareasStore";
+import type { DTO_Tarea } from "@/types/dominio";
+
+interface PropsVisor {
+  tarea: DTO_Tarea | null;
+  abierto: boolean;
+  onCerrar: () => void;
+}
+
+/**
+ * Visor del Segundo Cerebro. Drawer lateral que muestra título, etiquetas,
+ * fecha y notas markdown editables del Proyecto/Recurso seleccionado.
+ */
+export const VisorRecursoSheet = ({ tarea, abierto, onCerrar }: PropsVisor) => {
+  const actualizarNotas = useTareasStore((s) => s.actualizarNotas);
+  const [notas, setNotas] = useState<string>("");
+  const [tagsInput, setTagsInput] = useState<string>("");
+  const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => {
+    if (tarea) {
+      setNotas(tarea.notasMarkdown ?? "");
+      setTagsInput((tarea.etiquetas ?? []).join(" "));
+    }
+  }, [tarea]);
+
+  if (!tarea) return null;
+
+  const etiquetasParseadas = tagsInput
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((t) => (t.startsWith("#") ? t : `#${t}`));
+
+  const fecha = new Date(tarea.fechaCreacion).toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
+  const guardar = async () => {
+    setGuardando(true);
+    await actualizarNotas(tarea.id, notas, etiquetasParseadas);
+    setGuardando(false);
+    toast.success("Notas guardadas", { description: tarea.titulo });
+    onCerrar();
+  };
+
+  return (
+    <Sheet open={abierto} onOpenChange={(o) => !o && onCerrar()}>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-xl overflow-y-auto bg-background border-l border-border flex flex-col gap-5"
+      >
+        <SheetHeader className="text-left space-y-3">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">
+            {tarea.categoria} · {tarea.areaVinculadaId ?? "sin área"} · {fecha}
+          </div>
+          <SheetTitle className="font-display text-2xl sm:text-3xl leading-tight">
+            {tarea.titulo}
+          </SheetTitle>
+          <SheetDescription className="sr-only">
+            Visor del Segundo Cerebro para {tarea.titulo}
+          </SheetDescription>
+          {etiquetasParseadas.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {etiquetasParseadas.map((t) => (
+                <Badge key={t} variant="secondary" className="font-normal">
+                  {t}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </SheetHeader>
+
+        <div className="space-y-2">
+          <label className="text-xs uppercase tracking-wider text-muted-foreground">
+            Etiquetas (separadas por espacio)
+          </label>
+          <Input
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            placeholder="#AppMascotas #Arquitectura"
+          />
+        </div>
+
+        <div className="space-y-2 flex-1 flex flex-col min-h-[300px]">
+          <label className="text-xs uppercase tracking-wider text-muted-foreground">
+            Notas (Markdown)
+          </label>
+          <Textarea
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+            placeholder="# Título&#10;&#10;Tus ideas, links y pensamientos largos…"
+            className="flex-1 font-mono text-sm min-h-[260px]"
+          />
+        </div>
+
+        <SheetFooter className="gap-2">
+          <Button variant="ghost" onClick={onCerrar} disabled={guardando}>
+            Cancelar
+          </Button>
+          <Button onClick={guardar} disabled={guardando}>
+            {guardando ? "Guardando…" : "Guardar notas"}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+};
