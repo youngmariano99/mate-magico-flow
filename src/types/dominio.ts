@@ -22,12 +22,36 @@ export interface DTO_Tarea {
   notasMarkdown?: string;
 }
 
+/**
+ * Intenciones reconocidas por el Procesador Mágico.
+ * El Escudo Léxico se asegura de que toda entrada se mapee a una de estas
+ * intenciones o sea rechazada con 0 ms de latencia.
+ */
+export type IntencionIA =
+  | "AGREGAR_TAREA"
+  | "AGREGAR_NOTA"
+  | "AGENDAR_EVENTO"
+  | "COMPLETAR_TAREA"
+  | "COMPLETAR_HABITO"
+  | "REGISTRAR_RUTINA";
+
 export interface DTO_RespuestaProcesamientoIA {
   exito: boolean;
+  intencion: IntencionIA;
   tareaExtraida: string;
   categoriaSugerida: CategoriaPARA;
   tagsDetectados: string[];
   confianza: number;
+  /** True si la intención requiere agendar en el calendario semanal. */
+  requiereAgendamiento: boolean;
+  /** Fecha sugerida en ISO YYYY-MM-DD. */
+  fechaSugerida?: string;
+  /** Hora sugerida en HH:mm 24h. */
+  horaSugerida?: string;
+  /** Métricas crudas extraídas (ej: "2x5 sentadillas 10kg" o "10km 40min"). */
+  metricasExtraidas?: string;
+  /** Referencia opcional a la tarea/hábito objetivo (para COMPLETAR_*). */
+  objetivoId?: string;
 }
 
 export interface DTO_PerfilGamificacion {
