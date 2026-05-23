@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { NavegacionPrincipal, BarraInferior } from "@/components/layout/NavegacionPrincipal";
 import { PanelGamificacion } from "@/components/dashboard/PanelGamificacion";
 import { ListaMITs } from "@/components/dashboard/ListaMITs";
@@ -6,6 +7,8 @@ import { PanelHabitosDiarios } from "@/components/dashboard/PanelHabitosDiarios"
 import { InputMagico } from "@/components/dashboard/InputMagico";
 import { GuardiaSesion } from "@/auth/GuardiaSesion";
 import { useTareas } from "@/hooks/useTareas";
+import { useTareasStore } from "@/stores/tareasStore";
+import { useHabitosStore } from "@/stores/habitosStore";
 import { useGamificacionStore } from "@/stores/gamificacionStore";
 import { useAuth } from "@/auth/AuthProvider";
 import type { DTO_RespuestaProcesamientoIA } from "@/types/dominio";
@@ -27,11 +30,87 @@ function Dashboard() {
 
 function DashboardContenido() {
   const { tareas, cargando, crear, actualizarEstado } = useTareas();
+  const moverTarea = useTareasStore((s) => s.moverTarea);
+  const alternarHabito = useHabitosStore((s) => s.alternarEstadoHabito);
   const registrarLogro = useGamificacionStore((s) => s.registrarLogro);
   const { usuario } = useAuth();
 
+  /**
+   * Despacha la respuesta confirmada al store apropiado según la intención.
+   * Cada rama es deliberadamente angosta: si más adelante se agregan
+   * intenciones, TypeScript exigirá tratarlas (exhaustividad explícita).
+   */
   const manejarConfirmacion = async (r: DTO_RespuestaProcesamientoIA) => {
-    await crear(r.tareaExtraida, r.categoriaSugerida, 10);
+    switch (r.intencion) {
+      case "AGENDAR_EVENTO": {
+        const nueva = await useTareasStore.getState().agregar({
+          titulo: r.tareaExtraida,
+          categoria: r.categoriaSugerida,
+          puntosExperiencia: 10,
+          etiquetas: r.tagsDetectados,
+        });
+        if (r.fechaSugerida) await moverTarea(nueva.id, r.fechaSugerida);
+        toast.success("📅 Agendado", {
+          description: r.fechaSugerida ?? "Sin fecha — quedó en el backlog",
+        });
+        break;
+      }
+      case "AGREGAR_NOTA": {
+        await useTareasStore.getState().agregar({
+          titulo: r.tareaExtraida,
+          categoria: "Recurso",
+          puntosExperiencia: 5,
+          etiquetas: r.tagsDetectados,
+          notasMarkdown: r.tareaExtraida,
+        });
+        toast.success("💡 Nota guardada en el Segundo Cerebro");
+        break;
+      }
+      case "REGISTRAR_RUTINA": {
+        await useTareasStore.getState().agregar({
+          titulo: r.metricasExtraidas ? `Rutina: ${r.metricasExtraidas}` : r.tareaExtraida,
+          categoria: "Area",
+          areaVinculadaId: "salud",
+          puntosExperiencia: 20,
+          etiquetas: ["Salud", ...r.tagsDetectados],
+        });
+        registrarLogro(`Rutina registrada — ${r.tareaExtraida}`, 20, "Salud");
+        toast.success("🏋️ +20 XP en Salud");
+        break;
+      }
+      case "COMPLETAR_HABITO": {
+        const habito = useHabitosStore.getState().habitos.find((h) =>
+          r.tareaExtraida.toLowerCase().includes(h.titulo.toLowerCase()),
+        );
+        if (habito && !habito.completadoHoy) {
+          const act = alternarHabito(habito.id);
+          if (act) registrarLogro(`Hábito: ${act.titulo}`, act.xpPorCompletar, act.area);
+          toast.success(`🔥 ${habito.titulo} marcado`);
+        } else {
+          toast("No identifiqué el hábito exacto", { description: "Marcalo desde el panel diario." });
+        }
+        break;
+      }
+      case "COMPLETAR_TAREA": {
+        const objetivo = tareas.find((t) =>
+          r.tareaExtraida.toLowerCase().includes(t.titulo.toLowerCase().slice(0, 12)),
+        );
+        if (objetivo) {
+          await actualizarEstado(objetivo.id, "Completada");
+          registrarLogro(objetivo.titulo, objetivo.puntosExperiencia, objetivo.areaVinculadaId ?? "General");
+          toast.success(`🎯 +${objetivo.puntosExperiencia} XP`);
+        } else {
+          toast("No encontré la tarea", { description: "Probá ser más específico." });
+        }
+        break;
+      }
+      case "AGREGAR_TAREA":
+      default: {
+        await crear(r.tareaExtraida, r.categoriaSugerida, 10);
+        toast.success(`✅ Agregado a ${r.categoriaSugerida}`);
+        break;
+      }
+    }
   };
 
   const completar = async (id: string) => {
@@ -39,6 +118,7 @@ function DashboardContenido() {
     await actualizarEstado(id, "Completada");
     if (tarea) registrarLogro(tarea.titulo, tarea.puntosExperiencia, tarea.areaVinculadaId ?? "General");
   };
+
 
   const nombre = usuario?.nombreCompleto?.split(" ")[0] ?? "";
 

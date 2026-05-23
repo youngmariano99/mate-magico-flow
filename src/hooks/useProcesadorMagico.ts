@@ -1,41 +1,19 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import type {
-  CategoriaPARA,
-  DTO_RespuestaProcesamientoIA,
-} from "@/types/dominio";
+import { validarIntencionUsuario } from "@/services/mocks/escudoLexico";
+import type { DTO_RespuestaProcesamientoIA } from "@/types/dominio";
 
 /**
- * Hook que simula el procesamiento de IA (Groq) y dispara feedback toast.
- * La salida está estrictamente tipada como DTO_RespuestaProcesamientoIA
- * para impedir alucinaciones estructurales.
+ * Hook orquestador del Procesador Mágico.
+ *
+ * Flujo:
+ *  1) Delegar la validación al Escudo Léxico (puro, 0 ms).
+ *  2) Si es rechazo/ambigüedad: toast inmediato y NO llamamos al "mock Groq".
+ *  3) Si es aprobado: simulamos latencia de red (1 s) y devolvemos el DTO
+ *     estructurado para que la UI abra el Modal de Confirmación.
  *
  * Precondición: `texto` no vacío.
  */
-
-interface ReglaClasificacion {
-  patron: RegExp;
-  categoria: CategoriaPARA;
-  tags: string[];
-}
-
-const REGLAS: ReadonlyArray<ReglaClasificacion> = [
-  { patron: /\b(comprar|pagar|gasto|factura|plata|sueldo)\b/i, categoria: "Area", tags: ["Finanzas"] },
-  { patron: /\b(entren|gym|correr|nutrici[oó]n|m[eé]dico)\b/i, categoria: "Area", tags: ["Salud"] },
-  { patron: /\b(leer|art[ií]culo|video|curso|libro)\b/i, categoria: "Recurso", tags: ["Aprendizaje"] },
-  { patron: /\b(lanzar|construir|implementar|dise[ñn]ar|proyecto)\b/i, categoria: "Proyecto", tags: ["Build"] },
-  { patron: /\b(facu|tp|parcial|materia|estudiar)\b/i, categoria: "Proyecto", tags: ["Facultad"] },
-  { patron: /\b(archivar|guardar|viejo)\b/i, categoria: "Archivo", tags: ["Histórico"] },
-];
-
-const clasificar = (texto: string): { categoria: CategoriaPARA; tags: string[]; confianza: number } => {
-  for (const regla of REGLAS) {
-    if (regla.patron.test(texto)) {
-      return { categoria: regla.categoria, tags: regla.tags, confianza: 0.88 };
-    }
-  }
-  return { categoria: "Area", tags: ["General"], confianza: 0.55 };
-};
 
 interface EstadoProcesador {
   procesando: boolean;
@@ -59,25 +37,46 @@ export const useProcesadorMagico = () => {
         return Promise.reject(new Error(err));
       }
 
+      // 1) Escudo Léxico — síncrono, sin latencia.
+      const veredicto = validarIntencionUsuario(limpio);
+
+      if (veredicto.tipo === "rechazado") {
+        toast.error("❌ Solicitud no reconocida", { description: veredicto.razon });
+        setEstado({ procesando: false, ultimaRespuesta: null, error: veredicto.razon });
+        return Promise.reject(new Error(veredicto.razon));
+      }
+
+      if (veredicto.tipo === "ambiguo") {
+        toast("🤔 Entrada ambigua", { description: veredicto.sugerencia });
+        setEstado({ procesando: false, ultimaRespuesta: null, error: veredicto.sugerencia });
+        return Promise.reject(new Error(veredicto.sugerencia));
+      }
+
+      // 2) Aprobado → simular latencia del LLM (mock de Groq).
       setEstado({ procesando: true, ultimaRespuesta: null, error: null });
-      const idToast = toast.loading("Procesando con IA...", {
+      const idToast = toast.loading("Procesando con IA…", {
         description: `"${limpio.slice(0, 60)}${limpio.length > 60 ? "…" : ""}"`,
       });
 
+      const { analisis } = veredicto;
       return new Promise((resolve) => {
         setTimeout(() => {
-          const { categoria, tags, confianza } = clasificar(limpio);
           const respuesta: DTO_RespuestaProcesamientoIA = {
             exito: true,
+            intencion: analisis.intencion,
             tareaExtraida: limpio,
-            categoriaSugerida: categoria,
-            tagsDetectados: tags,
-            confianza,
+            categoriaSugerida: analisis.categoria,
+            tagsDetectados: analisis.tags,
+            confianza: analisis.confianza,
+            requiereAgendamiento: analisis.requiereAgendamiento,
+            fechaSugerida: analisis.fechaSugerida,
+            horaSugerida: analisis.horaSugerida,
+            metricasExtraidas: analisis.metricasExtraidas,
           };
           setEstado({ procesando: false, ultimaRespuesta: respuesta, error: null });
-          toast.success(`✨ Agregado a ${categoria}`, {
+          toast.success("✨ Listo para confirmar", {
             id: idToast,
-            description: `${limpio}${tags.length ? ` · ${tags.map((t) => `#${t}`).join(" ")}` : ""}`,
+            description: `${analisis.intencion.replace(/_/g, " ").toLowerCase()} · ${limpio}`,
           });
           resolve(respuesta);
         }, 1000);
