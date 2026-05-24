@@ -1,11 +1,12 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Home, Archive, TrendingUp, LogOut, CalendarDays } from "lucide-react";
+import { Home, Archive, TrendingUp, LogOut, CalendarDays, Dumbbell } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthProvider";
 
 const ITEMS = [
   { to: "/", label: "Hoy", Icon: Home },
   { to: "/planificacion", label: "Semana", Icon: CalendarDays },
+  { to: "/fitness", label: "Fitness", Icon: Dumbbell },
   { to: "/baul", label: "Baúl", Icon: Archive },
   { to: "/evolucion", label: "Evolución", Icon: TrendingUp },
 ] as const;
@@ -82,7 +83,7 @@ export const BarraInferior = () => {
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label="Navegación principal"
     >
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-5">
         {ITEMS.map(({ to, label, Icon }) => {
           const activo = pathname === to;
           return (

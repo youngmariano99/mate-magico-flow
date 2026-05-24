@@ -10,6 +10,7 @@ import { useTareas } from "@/hooks/useTareas";
 import { useTareasStore } from "@/stores/tareasStore";
 import { useHabitosStore } from "@/stores/habitosStore";
 import { useGamificacionStore } from "@/stores/gamificacionStore";
+import { useFitnessStore } from "@/stores/fitnessStore";
 import { useAuth } from "@/auth/AuthProvider";
 import type { DTO_RespuestaProcesamientoIA } from "@/types/dominio";
 
@@ -33,6 +34,7 @@ function DashboardContenido() {
   const moverTarea = useTareasStore((s) => s.moverTarea);
   const alternarHabito = useHabitosStore((s) => s.alternarEstadoHabito);
   const registrarLogro = useGamificacionStore((s) => s.registrarLogro);
+  const registrarEventoFitness = useFitnessStore((s) => s.registrarEventoCrudo);
   const { usuario } = useAuth();
 
   /**
@@ -67,15 +69,15 @@ function DashboardContenido() {
         break;
       }
       case "REGISTRAR_RUTINA": {
-        await useTareasStore.getState().agregar({
-          titulo: r.metricasExtraidas ? `Rutina: ${r.metricasExtraidas}` : r.tareaExtraida,
-          categoria: "Area",
-          areaVinculadaId: "salud",
-          puntosExperiencia: 20,
-          etiquetas: ["Salud", ...r.tagsDetectados],
+        const metricas = r.metricasExtraidas?.trim() || r.tareaExtraida;
+        const ev = registrarEventoFitness({
+          tipoEvento: "ENTRENAMIENTO",
+          metricas,
         });
-        registrarLogro(`Rutina registrada — ${r.tareaExtraida}`, 20, "Salud");
-        toast.success("🏋️ +20 XP en Salud");
+        registrarLogro(`Rutina — ${metricas}`, ev.xpOtorgado, "Salud");
+        toast.success("🏋️ Entrenamiento registrado", {
+          description: `+${ev.xpOtorgado} XP en Salud`,
+        });
         break;
       }
       case "COMPLETAR_HABITO": {

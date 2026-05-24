@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PlanificacionRouteImport } from './routes/planificacion'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FitnessRouteImport } from './routes/fitness'
 import { Route as EvolucionRouteImport } from './routes/evolucion'
 import { Route as BaulRouteImport } from './routes/baul'
 import { Route as IndexRouteImport } from './routes/index'
@@ -23,6 +24,11 @@ const PlanificacionRoute = PlanificacionRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FitnessRoute = FitnessRouteImport.update({
+  id: '/fitness',
+  path: '/fitness',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EvolucionRoute = EvolucionRouteImport.update({
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/baul': typeof BaulRoute
   '/evolucion': typeof EvolucionRoute
+  '/fitness': typeof FitnessRoute
   '/login': typeof LoginRoute
   '/planificacion': typeof PlanificacionRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/baul': typeof BaulRoute
   '/evolucion': typeof EvolucionRoute
+  '/fitness': typeof FitnessRoute
   '/login': typeof LoginRoute
   '/planificacion': typeof PlanificacionRoute
 }
@@ -60,21 +68,36 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/baul': typeof BaulRoute
   '/evolucion': typeof EvolucionRoute
+  '/fitness': typeof FitnessRoute
   '/login': typeof LoginRoute
   '/planificacion': typeof PlanificacionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/baul' | '/evolucion' | '/login' | '/planificacion'
+  fullPaths:
+    | '/'
+    | '/baul'
+    | '/evolucion'
+    | '/fitness'
+    | '/login'
+    | '/planificacion'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/baul' | '/evolucion' | '/login' | '/planificacion'
-  id: '__root__' | '/' | '/baul' | '/evolucion' | '/login' | '/planificacion'
+  to: '/' | '/baul' | '/evolucion' | '/fitness' | '/login' | '/planificacion'
+  id:
+    | '__root__'
+    | '/'
+    | '/baul'
+    | '/evolucion'
+    | '/fitness'
+    | '/login'
+    | '/planificacion'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BaulRoute: typeof BaulRoute
   EvolucionRoute: typeof EvolucionRoute
+  FitnessRoute: typeof FitnessRoute
   LoginRoute: typeof LoginRoute
   PlanificacionRoute: typeof PlanificacionRoute
 }
@@ -93,6 +116,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fitness': {
+      id: '/fitness'
+      path: '/fitness'
+      fullPath: '/fitness'
+      preLoaderRoute: typeof FitnessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/evolucion': {
@@ -123,6 +153,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BaulRoute: BaulRoute,
   EvolucionRoute: EvolucionRoute,
+  FitnessRoute: FitnessRoute,
   LoginRoute: LoginRoute,
   PlanificacionRoute: PlanificacionRoute,
 }
