@@ -45,7 +45,6 @@ const ETIQUETAS_TIPO: Record<TipoEventoFisico, { label: string; icono: string }>
 
 function Contenido() {
   const historial = useFitnessStore((s) => s.historialEventos);
-  const plantillas = useFitnessStore((s) => s.plantillas);
   const registrarNEAT = useFitnessStore((s) => s.registrarNEAT);
   const registrarPausa = useFitnessStore((s) => s.registrarPausaActiva);
   const registrarLogro = useGamificacionStore((s) => s.registrarLogro);
