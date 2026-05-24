@@ -111,3 +111,39 @@ export interface DTO_Proyecto {
   fechaObjetivo?: string;
   fechaCreacion: string;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Fitness & Cuantificación Personal (Event Sourcing)                         */
+/* -------------------------------------------------------------------------- */
+
+/** Tipos de eventos físicos. Unión cerrada — el escudo léxico y la UI se
+ *  apoyan en exhaustividad explícita. */
+export type TipoEventoFisico = "NEAT" | "PAUSA_ACTIVA" | "ENTRENAMIENTO";
+
+/**
+ * Evento físico inmutable. El `fitnessStore` es append-only: no se editan
+ * ni borran eventos, para preservar el historial analítico.
+ */
+export interface DTO_EventoFisico {
+  id: string;
+  fechaHora: string; // ISO 8601
+  tipoEvento: TipoEventoFisico;
+  /** Métricas crudas, ej: "20min caminata", "3x10 sentadilla 60kg". */
+  metricas: string;
+  /** Referencia opcional a la plantilla origen (para entrenamientos). */
+  plantillaId?: string;
+  /** XP otorgado en el momento del registro (para auditoría). */
+  xpOtorgado: number;
+}
+
+/**
+ * Plantilla de rutina reutilizable. CRUD libre — NO es parte del historial
+ * inmutable: las plantillas pueden editarse y borrarse sin afectar eventos
+ * pasados (que ya quedaron congelados con su `plantillaId`).
+ */
+export interface DTO_PlantillaRutina {
+  id: string;
+  titulo: string;
+  ejercicios: ReadonlyArray<string>;
+  fechaCreacion: string;
+}
