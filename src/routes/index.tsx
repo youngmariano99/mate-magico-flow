@@ -69,15 +69,15 @@ function DashboardContenido() {
         break;
       }
       case "REGISTRAR_RUTINA": {
-        await useTareasStore.getState().agregar({
-          titulo: r.metricasExtraidas ? `Rutina: ${r.metricasExtraidas}` : r.tareaExtraida,
-          categoria: "Area",
-          areaVinculadaId: "salud",
-          puntosExperiencia: 20,
-          etiquetas: ["Salud", ...r.tagsDetectados],
+        const metricas = r.metricasExtraidas?.trim() || r.tareaExtraida;
+        const ev = registrarEventoFitness({
+          tipoEvento: "ENTRENAMIENTO",
+          metricas,
         });
-        registrarLogro(`Rutina registrada — ${r.tareaExtraida}`, 20, "Salud");
-        toast.success("🏋️ +20 XP en Salud");
+        registrarLogro(`Rutina — ${metricas}`, ev.xpOtorgado, "Salud");
+        toast.success("🏋️ Entrenamiento registrado", {
+          description: `+${ev.xpOtorgado} XP en Salud`,
+        });
         break;
       }
       case "COMPLETAR_HABITO": {
