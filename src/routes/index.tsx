@@ -34,6 +34,7 @@ function DashboardContenido() {
   const moverTarea = useTareasStore((s) => s.moverTarea);
   const alternarHabito = useHabitosStore((s) => s.alternarEstadoHabito);
   const registrarLogro = useGamificacionStore((s) => s.registrarLogro);
+  const registrarEventoFitness = useFitnessStore((s) => s.registrarEventoCrudo);
   const { usuario } = useAuth();
 
   /**
