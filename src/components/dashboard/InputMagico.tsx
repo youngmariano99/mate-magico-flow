@@ -127,6 +127,27 @@ export const InputMagico = ({ onTareaConfirmada }: PropsInputMagico) => {
           className="flex-1 bg-transparent outline-none px-2 py-3 text-base placeholder:text-muted-foreground disabled:opacity-60"
         />
         <button
+          type="button"
+          onClick={alternarMic}
+          disabled={procesando}
+          aria-label={dictado.grabando ? "Detener dictado" : "Dictar por voz"}
+          aria-pressed={dictado.grabando}
+          title={dictado.soportado ? "Dictado por voz" : "Dictado no soportado en este navegador"}
+          className={`relative shrink-0 h-10 w-10 grid place-items-center rounded-full border transition-colors disabled:opacity-40 ${
+            dictado.grabando
+              ? "bg-destructive/15 border-destructive text-destructive"
+              : "border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
+          }`}
+        >
+          {dictado.grabando && (
+            <>
+              <span className="absolute inset-0 rounded-full bg-destructive/30 animate-ping" aria-hidden />
+              <span className="absolute -inset-1 rounded-full border-2 border-destructive/40 animate-pulse" aria-hidden />
+            </>
+          )}
+          {dictado.soportado ? <Mic size={16} className="relative" /> : <MicOff size={16} className="relative" />}
+        </button>
+        <button
           type="submit"
           disabled={procesando || !texto.trim()}
           className="px-4 py-2.5 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
