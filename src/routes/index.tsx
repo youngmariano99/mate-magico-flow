@@ -10,6 +10,7 @@ import { useTareas } from "@/hooks/useTareas";
 import { useTareasStore } from "@/stores/tareasStore";
 import { useHabitosStore } from "@/stores/habitosStore";
 import { useGamificacionStore } from "@/stores/gamificacionStore";
+import { useFitnessStore } from "@/stores/fitnessStore";
 import { useAuth } from "@/auth/AuthProvider";
 import type { DTO_RespuestaProcesamientoIA } from "@/types/dominio";
 
