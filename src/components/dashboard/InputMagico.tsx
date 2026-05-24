@@ -35,7 +35,32 @@ export const InputMagico = ({ onTareaConfirmada }: PropsInputMagico) => {
   const [texto, setTexto] = useState("");
   const [respuestaPendiente, setRespuestaPendiente] = useState<DTO_RespuestaProcesamientoIA | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const baseTextoRef = useRef<string>("");
   const { procesando, procesarEntrada } = useProcesadorMagico();
+
+  // Combina el texto pre-existente con la transcripción en vivo.
+  const aplicarDictado = useCallback((transcripcion: string, esFinal: boolean) => {
+    const base = baseTextoRef.current;
+    const separador = base && !base.endsWith(" ") ? " " : "";
+    const combinado = `${base}${separador}${transcripcion}`.trimStart();
+    setTexto(combinado);
+    if (esFinal) baseTextoRef.current = combinado;
+  }, []);
+
+  const dictado = useDictadoVoz({ onTranscripcion: aplicarDictado });
+
+  const alternarMic = () => {
+    if (!dictado.soportado) {
+      toast.error("🎤 Dictado no disponible", {
+        description: "Tu navegador no soporta Web Speech API. Probá Chrome o Edge.",
+      });
+      return;
+    }
+    if (!dictado.grabando) {
+      baseTextoRef.current = texto;
+    }
+    dictado.alternar();
+  };
 
   const aplicarPill = (pill: Pill) => {
     setTexto(pill.template);
