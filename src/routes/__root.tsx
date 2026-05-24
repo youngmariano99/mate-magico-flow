@@ -10,6 +10,7 @@ import {
 import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/auth/AuthProvider";
+import { BotonAccionFlotante } from "@/components/layout/BotonAccionFlotante";
 import { registrarServiceWorker } from "@/pwa/registrarServiceWorker";
 
 import appCss from "../styles.css?url";
@@ -129,6 +130,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Outlet />
+        <BotonAccionFlotante />
         <Toaster
           position="top-right"
           theme="dark"

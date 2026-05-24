@@ -24,6 +24,8 @@ interface EstadoHabitos {
   alternarEstadoHabito: (id: string) => DTO_Habito | null;
   /** Simulación de "día siguiente": desmarca el flag de hoy sin tocar la racha. */
   resetearDia: () => void;
+  /** Crea un hábito manualmente (CRUD desde el FAB). */
+  agregar: (entrada: Omit<DTO_Habito, "id" | "rachaActual" | "completadoHoy">) => DTO_Habito;
 }
 
 export const useHabitosStore = create<EstadoHabitos>()(
@@ -51,6 +53,17 @@ export const useHabitosStore = create<EstadoHabitos>()(
         set({
           habitos: get().habitos.map((h) => ({ ...h, completadoHoy: false })),
         });
+      },
+
+      agregar: (entrada) => {
+        const nuevo: DTO_Habito = {
+          ...entrada,
+          id: `h-${Math.random().toString(36).slice(2, 9)}`,
+          rachaActual: 0,
+          completadoHoy: false,
+        };
+        set({ habitos: [...get().habitos, nuevo] });
+        return nuevo;
       },
     }),
     {

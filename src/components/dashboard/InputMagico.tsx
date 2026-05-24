@@ -1,5 +1,8 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useCallback, useRef, useState, type FormEvent } from "react";
+import { Mic, MicOff } from "lucide-react";
+import { toast } from "sonner";
 import { useProcesadorMagico } from "@/hooks/useProcesadorMagico";
+import { useDictadoVoz } from "@/hooks/useDictadoVoz";
 import { ModalConfirmacionMagica } from "./ModalConfirmacionMagica";
 import type { DTO_RespuestaProcesamientoIA } from "@/types/dominio";
 
@@ -32,7 +35,32 @@ export const InputMagico = ({ onTareaConfirmada }: PropsInputMagico) => {
   const [texto, setTexto] = useState("");
   const [respuestaPendiente, setRespuestaPendiente] = useState<DTO_RespuestaProcesamientoIA | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const baseTextoRef = useRef<string>("");
   const { procesando, procesarEntrada } = useProcesadorMagico();
+
+  // Combina el texto pre-existente con la transcripción en vivo.
+  const aplicarDictado = useCallback((transcripcion: string, esFinal: boolean) => {
+    const base = baseTextoRef.current;
+    const separador = base && !base.endsWith(" ") ? " " : "";
+    const combinado = `${base}${separador}${transcripcion}`.trimStart();
+    setTexto(combinado);
+    if (esFinal) baseTextoRef.current = combinado;
+  }, []);
+
+  const dictado = useDictadoVoz({ onTranscripcion: aplicarDictado });
+
+  const alternarMic = () => {
+    if (!dictado.soportado) {
+      toast.error("🎤 Dictado no disponible", {
+        description: "Tu navegador no soporta Web Speech API. Probá Chrome o Edge.",
+      });
+      return;
+    }
+    if (!dictado.grabando) {
+      baseTextoRef.current = texto;
+    }
+    dictado.alternar();
+  };
 
   const aplicarPill = (pill: Pill) => {
     setTexto(pill.template);
@@ -98,6 +126,27 @@ export const InputMagico = ({ onTareaConfirmada }: PropsInputMagico) => {
           aria-label="Input Mágico — asistente proactivo"
           className="flex-1 bg-transparent outline-none px-2 py-3 text-base placeholder:text-muted-foreground disabled:opacity-60"
         />
+        <button
+          type="button"
+          onClick={alternarMic}
+          disabled={procesando}
+          aria-label={dictado.grabando ? "Detener dictado" : "Dictar por voz"}
+          aria-pressed={dictado.grabando}
+          title={dictado.soportado ? "Dictado por voz" : "Dictado no soportado en este navegador"}
+          className={`relative shrink-0 h-10 w-10 grid place-items-center rounded-full border transition-colors disabled:opacity-40 ${
+            dictado.grabando
+              ? "bg-destructive/15 border-destructive text-destructive"
+              : "border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
+          }`}
+        >
+          {dictado.grabando && (
+            <>
+              <span className="absolute inset-0 rounded-full bg-destructive/30 animate-ping" aria-hidden />
+              <span className="absolute -inset-1 rounded-full border-2 border-destructive/40 animate-pulse" aria-hidden />
+            </>
+          )}
+          {dictado.soportado ? <Mic size={16} className="relative" /> : <MicOff size={16} className="relative" />}
+        </button>
         <button
           type="submit"
           disabled={procesando || !texto.trim()}
