@@ -97,3 +97,17 @@ export interface DTO_Habito {
   /** XP otorgado cada vez que se completa. */
   xpPorCompletar: number;
 }
+
+/**
+ * Proyecto PARA. En el mock se persiste como una `DTO_Tarea` con
+ * `categoria: "Proyecto"` dentro de `tareasStore`, pero la UI manipula
+ * este contrato estructurado para el CRUD manual.
+ */
+export interface DTO_Proyecto {
+  id: string;
+  titulo: string;
+  area: string;
+  descripcion?: string;
+  fechaObjetivo?: string;
+  fechaCreacion: string;
+}
