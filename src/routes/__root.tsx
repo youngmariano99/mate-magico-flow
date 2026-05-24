@@ -130,6 +130,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Outlet />
+        <BotonAccionFlotante />
         <Toaster
           position="top-right"
           theme="dark"
