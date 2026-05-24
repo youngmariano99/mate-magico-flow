@@ -1,11 +1,12 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Home, Archive, TrendingUp, LogOut, CalendarDays } from "lucide-react";
+import { Home, Archive, TrendingUp, LogOut, CalendarDays, Dumbbell } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthProvider";
 
 const ITEMS = [
   { to: "/", label: "Hoy", Icon: Home },
   { to: "/planificacion", label: "Semana", Icon: CalendarDays },
+  { to: "/fitness", label: "Fitness", Icon: Dumbbell },
   { to: "/baul", label: "Baúl", Icon: Archive },
   { to: "/evolucion", label: "Evolución", Icon: TrendingUp },
 ] as const;
