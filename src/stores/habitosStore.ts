@@ -54,6 +54,17 @@ export const useHabitosStore = create<EstadoHabitos>()(
           habitos: get().habitos.map((h) => ({ ...h, completadoHoy: false })),
         });
       },
+
+      agregar: (entrada) => {
+        const nuevo: DTO_Habito = {
+          ...entrada,
+          id: `h-${Math.random().toString(36).slice(2, 9)}`,
+          rachaActual: 0,
+          completadoHoy: false,
+        };
+        set({ habitos: [...get().habitos, nuevo] });
+        return nuevo;
+      },
     }),
     {
       name: "mateflow.habitos.v1",
