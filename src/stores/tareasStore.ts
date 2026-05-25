@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { CategoriaPARA, DTO_Tarea, EstadoTarea } from "@/types/dominio";
+import type { CategoriaPARA, DTO_ArchivoAdjunto, DTO_Tarea, EstadoTarea } from "@/types/dominio";
+
 
 /**
  * Store Zustand de tareas con persistencia en localStorage.
@@ -128,7 +129,10 @@ interface EstadoTareas {
   reordenarMITs: (idsOrdenados: ReadonlyArray<string>) => void;
   /** Edita las notas markdown y etiquetas de una tarea/recurso. */
   actualizarNotas: (id: string, notasMarkdown: string, etiquetas: ReadonlyArray<string>) => Promise<void>;
+  /** Adjunta un archivo (mock Google Drive) a una tarea/recurso. */
+  adjuntarArchivo: (id: string, archivo: Omit<DTO_ArchivoAdjunto, "id" | "fechaAdjuntado">) => Promise<DTO_ArchivoAdjunto>;
 }
+
 
 export const useTareasStore = create<EstadoTareas>()(
   persist(
@@ -178,7 +182,21 @@ export const useTareasStore = create<EstadoTareas>()(
         set({ tareas });
         await wait(null);
       },
+
+      adjuntarArchivo: async (id, archivo) => {
+        const nuevo: DTO_ArchivoAdjunto = {
+          ...archivo,
+          id: `adj-${Math.random().toString(36).slice(2, 9)}`,
+          fechaAdjuntado: new Date().toISOString(),
+        };
+        const tareas = get().tareas.map((t) =>
+          t.id === id ? { ...t, adjuntos: [...(t.adjuntos ?? []), nuevo] } : t,
+        );
+        set({ tareas });
+        return wait(nuevo);
+      },
     }),
+
     {
       name: "mateflow.tareas.v2",
       storage: createJSONStorage(() => localStorage),

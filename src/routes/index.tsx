@@ -5,6 +5,7 @@ import { PanelGamificacion } from "@/components/dashboard/PanelGamificacion";
 import { ListaMITs } from "@/components/dashboard/ListaMITs";
 import { PanelHabitosDiarios } from "@/components/dashboard/PanelHabitosDiarios";
 import { InputMagico } from "@/components/dashboard/InputMagico";
+import { ResumenSemanalIA } from "@/components/dashboard/ResumenSemanalIA";
 import { GuardiaSesion } from "@/auth/GuardiaSesion";
 import { useTareas } from "@/hooks/useTareas";
 import { useTareasStore } from "@/stores/tareasStore";
@@ -135,6 +136,7 @@ function DashboardContenido() {
           </h1>
         </div>
         <PanelGamificacion />
+        <ResumenSemanalIA />
         <ListaMITs tareas={tareas} cargando={cargando} onCompletar={(id) => void completar(id)} />
         <PanelHabitosDiarios />
       </main>

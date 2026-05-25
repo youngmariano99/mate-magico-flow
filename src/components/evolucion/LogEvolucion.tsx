@@ -1,7 +1,8 @@
 import { useGamificacion } from "@/hooks/useGamificacion";
+import { GraficoBalanceVida } from "@/components/evolucion/GraficoBalanceVida";
 
 /**
- * Log de Evolución: barras CSS puras (sin libs) por área + lista de logros.
+ * Log de Evolución: gráfico de balance + barras CSS por área + lista de logros.
  */
 export const LogEvolucion = () => {
   const { perfil, cargando } = useGamificacion();
@@ -14,6 +15,9 @@ export const LogEvolucion = () => {
 
   return (
     <div className="space-y-8">
+      <GraficoBalanceVida />
+
+
       <section className="surface-card p-6">
         <h3 className="font-display text-lg mb-5">XP por área</h3>
         <ul className="space-y-4">

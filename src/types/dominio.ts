@@ -6,6 +6,16 @@
 export type CategoriaPARA = "Proyecto" | "Area" | "Recurso" | "Archivo";
 export type EstadoTarea = "Activa" | "Completada" | "Archivada";
 
+export interface DTO_ArchivoAdjunto {
+  id: string;
+  nombre: string;
+  /** URL mockeada que simula un enlace público de Google Drive. */
+  urlMockeada: string;
+  /** Extensión normalizada para elegir ícono (pdf, doc, sheet, img, link). */
+  tipoIcono: "pdf" | "doc" | "sheet" | "slide" | "img" | "link" | "otro";
+  fechaAdjuntado: string;
+}
+
 export interface DTO_Tarea {
   id: string;
   titulo: string;
@@ -20,7 +30,10 @@ export interface DTO_Tarea {
   etiquetas?: ReadonlyArray<string>;
   /** Contenido extendido (markdown) editable desde el Visor del Segundo Cerebro. */
   notasMarkdown?: string;
+  /** Archivos adjuntos (mock de Google Drive). */
+  adjuntos?: ReadonlyArray<DTO_ArchivoAdjunto>;
 }
+
 
 /**
  * Intenciones reconocidas por el Procesador Mágico.
