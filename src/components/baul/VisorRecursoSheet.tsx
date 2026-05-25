@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Paperclip, FileText, FileSpreadsheet, Presentation, Image as ImageIcon, Link2, File } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,7 +7,37 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useTareasStore } from "@/stores/tareasStore";
-import type { DTO_Tarea } from "@/types/dominio";
+import type { DTO_ArchivoAdjunto, DTO_Tarea } from "@/types/dominio";
+
+const detectarTipo = (nombre: string): DTO_ArchivoAdjunto["tipoIcono"] => {
+  const ext = nombre.split(".").pop()?.toLowerCase() ?? "";
+  if (["pdf"].includes(ext)) return "pdf";
+  if (["doc", "docx", "md", "txt"].includes(ext)) return "doc";
+  if (["xls", "xlsx", "csv"].includes(ext)) return "sheet";
+  if (["ppt", "pptx", "key"].includes(ext)) return "slide";
+  if (["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(ext)) return "img";
+  return "otro";
+};
+
+const IconoAdjunto = ({ tipo }: { tipo: DTO_ArchivoAdjunto["tipoIcono"] }) => {
+  const cls = "size-4 shrink-0 text-muted-foreground";
+  switch (tipo) {
+    case "pdf":
+    case "doc":
+      return <FileText className={cls} />;
+    case "sheet":
+      return <FileSpreadsheet className={cls} />;
+    case "slide":
+      return <Presentation className={cls} />;
+    case "img":
+      return <ImageIcon className={cls} />;
+    case "link":
+      return <Link2 className={cls} />;
+    default:
+      return <File className={cls} />;
+  }
+};
+
 
 interface PropsVisor {
   tarea: DTO_Tarea | null;
