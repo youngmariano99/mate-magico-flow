@@ -51,9 +51,16 @@ interface PropsVisor {
  */
 export const VisorRecursoSheet = ({ tarea, abierto, onCerrar }: PropsVisor) => {
   const actualizarNotas = useTareasStore((s) => s.actualizarNotas);
+  const adjuntarArchivo = useTareasStore((s) => s.adjuntarArchivo);
   const [notas, setNotas] = useState<string>("");
   const [tagsInput, setTagsInput] = useState<string>("");
   const [guardando, setGuardando] = useState(false);
+  const inputArchivoRef = useRef<HTMLInputElement>(null);
+
+  // Lee la versión vigente de la tarea para refrescar `adjuntos` sin reabrir.
+  const tareaActual = useTareasStore((s) =>
+    tarea ? s.tareas.find((t) => t.id === tarea.id) ?? tarea : null,
+  );
 
   useEffect(() => {
     if (tarea) {
@@ -62,7 +69,7 @@ export const VisorRecursoSheet = ({ tarea, abierto, onCerrar }: PropsVisor) => {
     }
   }, [tarea]);
 
-  if (!tarea) return null;
+  if (!tareaActual) return null;
 
   const etiquetasParseadas = tagsInput
     .split(/\s+/)
@@ -70,7 +77,7 @@ export const VisorRecursoSheet = ({ tarea, abierto, onCerrar }: PropsVisor) => {
     .filter(Boolean)
     .map((t) => (t.startsWith("#") ? t : `#${t}`));
 
-  const fecha = new Date(tarea.fechaCreacion).toLocaleDateString("es-AR", {
+  const fecha = new Date(tareaActual.fechaCreacion).toLocaleDateString("es-AR", {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -78,10 +85,28 @@ export const VisorRecursoSheet = ({ tarea, abierto, onCerrar }: PropsVisor) => {
 
   const guardar = async () => {
     setGuardando(true);
-    await actualizarNotas(tarea.id, notas, etiquetasParseadas);
+    await actualizarNotas(tareaActual.id, notas, etiquetasParseadas);
     setGuardando(false);
-    toast.success("Notas guardadas", { description: tarea.titulo });
+    toast.success("Notas guardadas", { description: tareaActual.titulo });
     onCerrar();
+  };
+
+  const abrirSelectorDrive = () => {
+    inputArchivoRef.current?.click();
+  };
+
+  const onArchivoSeleccionado = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const slug = encodeURIComponent(file.name);
+    const urlMockeada = `https://drive.google.com/file/d/mock-${Date.now().toString(36)}/${slug}`;
+    await adjuntarArchivo(tareaActual.id, {
+      nombre: file.name,
+      urlMockeada,
+      tipoIcono: detectarTipo(file.name),
+    });
+    toast.success("📎 Archivo adjuntado desde Drive", { description: file.name });
   };
 
   return (
