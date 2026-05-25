@@ -136,6 +136,7 @@ function DashboardContenido() {
           </h1>
         </div>
         <PanelGamificacion />
+        <ResumenSemanalIA />
         <ListaMITs tareas={tareas} cargando={cargando} onCompletar={(id) => void completar(id)} />
         <PanelHabitosDiarios />
       </main>
