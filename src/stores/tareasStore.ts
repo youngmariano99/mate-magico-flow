@@ -129,7 +129,10 @@ interface EstadoTareas {
   reordenarMITs: (idsOrdenados: ReadonlyArray<string>) => void;
   /** Edita las notas markdown y etiquetas de una tarea/recurso. */
   actualizarNotas: (id: string, notasMarkdown: string, etiquetas: ReadonlyArray<string>) => Promise<void>;
+  /** Adjunta un archivo (mock Google Drive) a una tarea/recurso. */
+  adjuntarArchivo: (id: string, archivo: Omit<DTO_ArchivoAdjunto, "id" | "fechaAdjuntado">) => Promise<DTO_ArchivoAdjunto>;
 }
+
 
 export const useTareasStore = create<EstadoTareas>()(
   persist(
