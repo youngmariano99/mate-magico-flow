@@ -182,7 +182,21 @@ export const useTareasStore = create<EstadoTareas>()(
         set({ tareas });
         await wait(null);
       },
+
+      adjuntarArchivo: async (id, archivo) => {
+        const nuevo: DTO_ArchivoAdjunto = {
+          ...archivo,
+          id: `adj-${Math.random().toString(36).slice(2, 9)}`,
+          fechaAdjuntado: new Date().toISOString(),
+        };
+        const tareas = get().tareas.map((t) =>
+          t.id === id ? { ...t, adjuntos: [...(t.adjuntos ?? []), nuevo] } : t,
+        );
+        set({ tareas });
+        return wait(nuevo);
+      },
     }),
+
     {
       name: "mateflow.tareas.v2",
       storage: createJSONStorage(() => localStorage),
