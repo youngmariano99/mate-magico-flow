@@ -117,13 +117,13 @@ export const VisorRecursoSheet = ({ tarea, abierto, onCerrar }: PropsVisor) => {
       >
         <SheetHeader className="text-left space-y-3">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">
-            {tarea.categoria} · {tarea.areaVinculadaId ?? "sin área"} · {fecha}
+            {tareaActual.categoria} · {tareaActual.areaVinculadaId ?? "sin área"} · {fecha}
           </div>
           <SheetTitle className="font-display text-2xl sm:text-3xl leading-tight">
-            {tarea.titulo}
+            {tareaActual.titulo}
           </SheetTitle>
           <SheetDescription className="sr-only">
-            Visor del Segundo Cerebro para {tarea.titulo}
+            Visor del Segundo Cerebro para {tareaActual.titulo}
           </SheetDescription>
           {etiquetasParseadas.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
@@ -147,7 +147,7 @@ export const VisorRecursoSheet = ({ tarea, abierto, onCerrar }: PropsVisor) => {
           />
         </div>
 
-        <div className="space-y-2 flex-1 flex flex-col min-h-[300px]">
+        <div className="space-y-2 flex-1 flex flex-col min-h-[260px]">
           <label className="text-xs uppercase tracking-wider text-muted-foreground">
             Notas (Markdown)
           </label>
@@ -155,8 +155,55 @@ export const VisorRecursoSheet = ({ tarea, abierto, onCerrar }: PropsVisor) => {
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
             placeholder="# Título&#10;&#10;Tus ideas, links y pensamientos largos…"
-            className="flex-1 font-mono text-sm min-h-[260px]"
+            className="flex-1 font-mono text-sm min-h-[220px]"
           />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">
+              Adjuntos ({tareaActual.adjuntos?.length ?? 0})
+            </label>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={abrirSelectorDrive}
+              className="gap-1.5"
+            >
+              <Paperclip className="size-3.5" />
+              Adjuntar de Drive
+            </Button>
+          </div>
+          <input
+            ref={inputArchivoRef}
+            type="file"
+            className="hidden"
+            onChange={onArchivoSeleccionado}
+          />
+          {tareaActual.adjuntos && tareaActual.adjuntos.length > 0 ? (
+            <ul className="space-y-1.5">
+              {tareaActual.adjuntos.map((a) => (
+                <li key={a.id}>
+                  <a
+                    href={a.urlMockeada}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm rounded-md border border-border px-3 py-2 hover:bg-muted transition-colors"
+                  >
+                    <IconoAdjunto tipo={a.tipoIcono} />
+                    <span className="truncate flex-1">{a.nombre}</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">
+                      Drive
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              Sin archivos. Conectá un PDF, hoja o imagen desde tu Drive mockeado.
+            </p>
+          )}
         </div>
 
         <SheetFooter className="gap-2">
@@ -167,6 +214,7 @@ export const VisorRecursoSheet = ({ tarea, abierto, onCerrar }: PropsVisor) => {
             {guardando ? "Guardando…" : "Guardar notas"}
           </Button>
         </SheetFooter>
+
       </SheetContent>
     </Sheet>
   );
