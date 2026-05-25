@@ -50,7 +50,7 @@ export const GraficoBalanceVida = () => {
                 innerRadius={60}
                 outerRadius={100}
                 paddingAngle={2}
-                stroke="hsl(var(--background))"
+                stroke="var(--background)"
               >
                 {segmentos.map((s) => (
                   <Cell key={s.area} fill={s.color} />
@@ -58,13 +58,15 @@ export const GraficoBalanceVida = () => {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  background: "hsl(var(--popover))",
-                  border: "1px solid hsl(var(--border))",
+                  background: "var(--popover, var(--background))",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                   fontSize: 12,
+                  color: "var(--foreground)",
                 }}
                 formatter={(value: number, name: string) => [`${value} XP`, name]}
               />
+
               <Legend
                 wrapperStyle={{ fontSize: 12 }}
                 formatter={(value: string) => (
