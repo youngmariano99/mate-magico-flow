@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { CategoriaPARA, DTO_Tarea, EstadoTarea } from "@/types/dominio";
+import type { CategoriaPARA, DTO_ArchivoAdjunto, DTO_Tarea, EstadoTarea } from "@/types/dominio";
+
 
 /**
  * Store Zustand de tareas con persistencia en localStorage.
