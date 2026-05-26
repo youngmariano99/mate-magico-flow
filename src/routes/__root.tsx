@@ -132,6 +132,7 @@ function RootComponent() {
       <AuthProvider>
         <Outlet />
         <BotonAccionFlotante />
+        <MateBotAvatar />
         <Toaster
           position="top-right"
           theme="dark"
