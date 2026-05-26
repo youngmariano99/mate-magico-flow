@@ -100,8 +100,12 @@ const extraerHora = (texto: string): string | undefined => {
 
 const inferirIntencion = (texto: string): IntencionIA => {
   const t = texto.toLowerCase();
+  // INCREMENTAR_KPI tiene prioridad: requiere número + verbo de consumo.
+  if (REGEX_INCREMENTO_KPI.test(t) && !/\b(entren[oé]|rutina|sentadill|press|peso muerto|gym)\b/.test(t)) {
+    return "INCREMENTAR_KPI";
+  }
   if (/\b(termin[eé]|complet[eé]|hice|logr[eé])\b/.test(t)) {
-    if (/\b(habito|hábito|rutina diaria|neat|frutas)\b/.test(t)) return "COMPLETAR_HABITO";
+    if (/\b(habito|hábito|rutina diaria|neat)\b/.test(t)) return "COMPLETAR_HABITO";
     return "COMPLETAR_TAREA";
   }
   if (/\b(entren[oé]|rutina|corr[ií]|trote|sentadill|press|peso muerto|gym)\b/.test(t)) return "REGISTRAR_RUTINA";
@@ -174,6 +178,17 @@ export const validarIntencionUsuario = (texto: string): ResultadoEscudo => {
   const horaSugerida = extraerHora(texto);
   const metricasMatch = REGEX_METRICAS.exec(texto)?.[0];
 
+  // Extracción específica para INCREMENTAR_KPI.
+  let cantidadDetectada: number | undefined;
+  let kpiObjetivoTexto: string | undefined;
+  if (intencion === "INCREMENTAR_KPI") {
+    const m = REGEX_INCREMENTO_KPI.exec(texto);
+    if (m) {
+      cantidadDetectada = Number(m[1].replace(",", "."));
+      kpiObjetivoTexto = m[2].trim().toLowerCase();
+    }
+  }
+
   const requiereAgendamiento =
     intencion === "AGENDAR_EVENTO" || Boolean(fechaSugerida) || Boolean(horaSugerida);
 
@@ -188,6 +203,8 @@ export const validarIntencionUsuario = (texto: string): ResultadoEscudo => {
       fechaSugerida,
       horaSugerida,
       metricasExtraidas: metricasMatch,
+      cantidadDetectada,
+      kpiObjetivoTexto,
     },
   };
 };

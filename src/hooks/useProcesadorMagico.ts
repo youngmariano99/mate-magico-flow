@@ -72,6 +72,8 @@ export const useProcesadorMagico = () => {
             fechaSugerida: analisis.fechaSugerida,
             horaSugerida: analisis.horaSugerida,
             metricasExtraidas: analisis.metricasExtraidas,
+            cantidadDetectada: analisis.cantidadDetectada,
+            kpiObjetivoTexto: analisis.kpiObjetivoTexto,
           };
           setEstado({ procesando: false, ultimaRespuesta: respuesta, error: null });
           toast.success("✨ Listo para confirmar", {

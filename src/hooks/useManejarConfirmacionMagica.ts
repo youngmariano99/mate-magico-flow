@@ -4,6 +4,7 @@ import { useTareasStore } from "@/stores/tareasStore";
 import { useHabitosStore } from "@/stores/habitosStore";
 import { useGamificacionStore } from "@/stores/gamificacionStore";
 import { useFitnessStore } from "@/stores/fitnessStore";
+import { useKpisStore } from "@/stores/kpisStore";
 import type { DTO_RespuestaProcesamientoIA } from "@/types/dominio";
 
 /**
@@ -19,6 +20,7 @@ export const useManejarConfirmacionMagica = () => {
   const alternarHabito = useHabitosStore((s) => s.alternarEstadoHabito);
   const registrarLogro = useGamificacionStore((s) => s.registrarLogro);
   const registrarEventoFitness = useFitnessStore((s) => s.registrarEventoCrudo);
+  const incrementarKPI = useKpisStore((s) => s.incrementar);
 
   return useCallback(
     async (r: DTO_RespuestaProcesamientoIA) => {
