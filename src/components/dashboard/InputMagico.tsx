@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Mic, MicOff } from "lucide-react";
 import { toast } from "sonner";
 import { useProcesadorMagico } from "@/hooks/useProcesadorMagico";
@@ -8,6 +8,10 @@ import type { DTO_RespuestaProcesamientoIA } from "@/types/dominio";
 
 interface PropsInputMagico {
   onTareaConfirmada: (respuesta: DTO_RespuestaProcesamientoIA) => void | Promise<void>;
+  /** Emite el flag de procesamiento (útil para animar avatares externos). */
+  onProcesandoChange?: (procesando: boolean) => void;
+  /** Disparado al confirmar exitosamente — permite cerrar consolas contenedoras. */
+  onConfirmado?: () => void;
 }
 
 interface Pill {
@@ -31,12 +35,16 @@ const PILLS: ReadonlyArray<Pill> = [
  * Input Mágico — captura, valida (Escudo Léxico), simula IA y muestra el
  * Modal de Confirmación. Nunca muta stores por sí mismo: delega en el padre.
  */
-export const InputMagico = ({ onTareaConfirmada }: PropsInputMagico) => {
+export const InputMagico = ({ onTareaConfirmada, onProcesandoChange, onConfirmado }: PropsInputMagico) => {
   const [texto, setTexto] = useState("");
   const [respuestaPendiente, setRespuestaPendiente] = useState<DTO_RespuestaProcesamientoIA | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const baseTextoRef = useRef<string>("");
   const { procesando, procesarEntrada } = useProcesadorMagico();
+
+  useEffect(() => {
+    onProcesandoChange?.(procesando);
+  }, [procesando, onProcesandoChange]);
 
   // Combina el texto pre-existente con la transcripción en vivo.
   const aplicarDictado = useCallback((transcripcion: string, esFinal: boolean) => {
@@ -90,6 +98,7 @@ export const InputMagico = ({ onTareaConfirmada }: PropsInputMagico) => {
     await onTareaConfirmada(respuestaPendiente);
     setRespuestaPendiente(null);
     setTexto("");
+    onConfirmado?.();
   };
 
   const rechazar = () => setRespuestaPendiente(null);
