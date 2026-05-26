@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Mic, MicOff } from "lucide-react";
 import { toast } from "sonner";
 import { useProcesadorMagico } from "@/hooks/useProcesadorMagico";
@@ -8,6 +8,10 @@ import type { DTO_RespuestaProcesamientoIA } from "@/types/dominio";
 
 interface PropsInputMagico {
   onTareaConfirmada: (respuesta: DTO_RespuestaProcesamientoIA) => void | Promise<void>;
+  /** Emite el flag de procesamiento (útil para animar avatares externos). */
+  onProcesandoChange?: (procesando: boolean) => void;
+  /** Disparado al confirmar exitosamente — permite cerrar consolas contenedoras. */
+  onConfirmado?: () => void;
 }
 
 interface Pill {
