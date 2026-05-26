@@ -98,6 +98,7 @@ export const InputMagico = ({ onTareaConfirmada, onProcesandoChange, onConfirmad
     await onTareaConfirmada(respuestaPendiente);
     setRespuestaPendiente(null);
     setTexto("");
+    onConfirmado?.();
   };
 
   const rechazar = () => setRespuestaPendiente(null);
