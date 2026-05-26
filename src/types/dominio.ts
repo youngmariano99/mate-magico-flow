@@ -46,7 +46,8 @@ export type IntencionIA =
   | "AGENDAR_EVENTO"
   | "COMPLETAR_TAREA"
   | "COMPLETAR_HABITO"
-  | "REGISTRAR_RUTINA";
+  | "REGISTRAR_RUTINA"
+  | "INCREMENTAR_KPI";
 
 export interface DTO_RespuestaProcesamientoIA {
   exito: boolean;
@@ -65,6 +66,10 @@ export interface DTO_RespuestaProcesamientoIA {
   metricasExtraidas?: string;
   /** Referencia opcional a la tarea/hábito objetivo (para COMPLETAR_*). */
   objetivoId?: string;
+  /** Cantidad numérica detectada (para INCREMENTAR_KPI). */
+  cantidadDetectada?: number;
+  /** Texto crudo del KPI/target al que se quiere incrementar. */
+  kpiObjetivoTexto?: string;
 }
 
 export interface DTO_PerfilGamificacion {
@@ -159,4 +164,46 @@ export interface DTO_PlantillaRutina {
   titulo: string;
   ejercicios: ReadonlyArray<string>;
   fechaCreacion: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/* KPIs Personales (Quantified Self paramétrico)                              */
+/* -------------------------------------------------------------------------- */
+
+export type FrecuenciaKPI = "DIARIO" | "SEMANAL" | "MENSUAL";
+
+/**
+ * KPI paramétrico. Es CONFIGURACIÓN — define la meta a alcanzar. Los datos
+ * crudos viven en `DTO_EventoKPI` (append-only). El progreso se calcula al
+ * vuelo sumando los eventos del rango temporal activo.
+ */
+export interface DTO_KPI {
+  id: string;
+  titulo: string;
+  area: string;
+  /** Meta numérica del período declarado por `frecuencia`. */
+  objetivo: number;
+  /** Unidad legible para la UI (ej: "veces", "hrs", "vasos", "frutas"). */
+  unidad: string;
+  frecuencia: FrecuenciaKPI;
+  /** Agrupador visual opcional (ej: "Actividad Física", "Nutrición"). */
+  grupo?: string;
+  /** Color OKLCH del anillo. Si no se define, se calcula determinista. */
+  colorAcento?: string;
+  fechaCreacion: string;
+}
+
+/**
+ * Evento puntual e inmutable que aporta `cantidad` unidades a un KPI.
+ * Append-only — nunca se edita ni se borra. Calcular sumas con `useMemo`.
+ */
+export interface DTO_EventoKPI {
+  id: string;
+  kpiId: string;
+  fechaHora: string; // ISO 8601
+  cantidad: number;
+  /** Origen del evento — para auditoría/UX. */
+  fuente: "MANUAL" | "INCREMENTO_RAPIDO" | "IA";
+  /** Texto crudo opcional (cuando el origen es IA). */
+  nota?: string;
 }

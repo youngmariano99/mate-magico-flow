@@ -4,6 +4,7 @@ import { useTareasStore } from "@/stores/tareasStore";
 import { useHabitosStore } from "@/stores/habitosStore";
 import { useGamificacionStore } from "@/stores/gamificacionStore";
 import { useFitnessStore } from "@/stores/fitnessStore";
+import { useKpisStore } from "@/stores/kpisStore";
 import type { DTO_RespuestaProcesamientoIA } from "@/types/dominio";
 
 /**
@@ -19,6 +20,7 @@ export const useManejarConfirmacionMagica = () => {
   const alternarHabito = useHabitosStore((s) => s.alternarEstadoHabito);
   const registrarLogro = useGamificacionStore((s) => s.registrarLogro);
   const registrarEventoFitness = useFitnessStore((s) => s.registrarEventoCrudo);
+  const incrementarKPI = useKpisStore((s) => s.incrementar);
 
   return useCallback(
     async (r: DTO_RespuestaProcesamientoIA) => {
@@ -92,6 +94,35 @@ export const useManejarConfirmacionMagica = () => {
           }
           break;
         }
+        case "INCREMENTAR_KPI": {
+          const cantidad = r.cantidadDetectada ?? 1;
+          const objetivo = (r.kpiObjetivoTexto ?? "").toLowerCase();
+          const kpis = useKpisStore.getState().kpis;
+          // Matching laxo: el título del KPI o su unidad debe aparecer en el texto.
+          const kpi = kpis.find((k) => {
+            const t = k.titulo.toLowerCase();
+            const u = k.unidad.toLowerCase();
+            return (
+              objetivo.includes(t) ||
+              t.includes(objetivo) ||
+              objetivo.includes(u) ||
+              u.includes(objetivo)
+            );
+          });
+          if (kpi) {
+            const ev = incrementarKPI(kpi.id, cantidad, "IA", r.tareaExtraida);
+            if (ev) {
+              toast.success(`🎯 +${cantidad} ${kpi.unidad}`, {
+                description: `${kpi.titulo} actualizado`,
+              });
+            }
+          } else {
+            toast("No identifiqué el KPI exacto", {
+              description: `Sumá manualmente "${objetivo}" desde el panel de KPIs.`,
+            });
+          }
+          break;
+        }
         case "AGREGAR_TAREA":
         default: {
           await useTareasStore.getState().agregar({
@@ -104,6 +135,6 @@ export const useManejarConfirmacionMagica = () => {
         }
       }
     },
-    [moverTarea, cambiarEstado, alternarHabito, registrarLogro, registrarEventoFitness],
+    [moverTarea, cambiarEstado, alternarHabito, registrarLogro, registrarEventoFitness, incrementarKPI],
   );
 };

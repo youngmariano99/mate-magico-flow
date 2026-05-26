@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PlanificacionRouteImport } from './routes/planificacion'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as KpisRouteImport } from './routes/kpis'
 import { Route as FitnessRouteImport } from './routes/fitness'
 import { Route as EvolucionRouteImport } from './routes/evolucion'
 import { Route as BaulRouteImport } from './routes/baul'
@@ -24,6 +25,11 @@ const PlanificacionRoute = PlanificacionRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KpisRoute = KpisRouteImport.update({
+  id: '/kpis',
+  path: '/kpis',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FitnessRoute = FitnessRouteImport.update({
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/baul': typeof BaulRoute
   '/evolucion': typeof EvolucionRoute
   '/fitness': typeof FitnessRoute
+  '/kpis': typeof KpisRoute
   '/login': typeof LoginRoute
   '/planificacion': typeof PlanificacionRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/baul': typeof BaulRoute
   '/evolucion': typeof EvolucionRoute
   '/fitness': typeof FitnessRoute
+  '/kpis': typeof KpisRoute
   '/login': typeof LoginRoute
   '/planificacion': typeof PlanificacionRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/baul': typeof BaulRoute
   '/evolucion': typeof EvolucionRoute
   '/fitness': typeof FitnessRoute
+  '/kpis': typeof KpisRoute
   '/login': typeof LoginRoute
   '/planificacion': typeof PlanificacionRoute
 }
@@ -79,16 +88,25 @@ export interface FileRouteTypes {
     | '/baul'
     | '/evolucion'
     | '/fitness'
+    | '/kpis'
     | '/login'
     | '/planificacion'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/baul' | '/evolucion' | '/fitness' | '/login' | '/planificacion'
+  to:
+    | '/'
+    | '/baul'
+    | '/evolucion'
+    | '/fitness'
+    | '/kpis'
+    | '/login'
+    | '/planificacion'
   id:
     | '__root__'
     | '/'
     | '/baul'
     | '/evolucion'
     | '/fitness'
+    | '/kpis'
     | '/login'
     | '/planificacion'
   fileRoutesById: FileRoutesById
@@ -98,6 +116,7 @@ export interface RootRouteChildren {
   BaulRoute: typeof BaulRoute
   EvolucionRoute: typeof EvolucionRoute
   FitnessRoute: typeof FitnessRoute
+  KpisRoute: typeof KpisRoute
   LoginRoute: typeof LoginRoute
   PlanificacionRoute: typeof PlanificacionRoute
 }
@@ -116,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kpis': {
+      id: '/kpis'
+      path: '/kpis'
+      fullPath: '/kpis'
+      preLoaderRoute: typeof KpisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fitness': {
@@ -154,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
   BaulRoute: BaulRoute,
   EvolucionRoute: EvolucionRoute,
   FitnessRoute: FitnessRoute,
+  KpisRoute: KpisRoute,
   LoginRoute: LoginRoute,
   PlanificacionRoute: PlanificacionRoute,
 }

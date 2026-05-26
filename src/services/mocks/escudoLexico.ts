@@ -26,6 +26,10 @@ export interface AnalisisIntencion {
   fechaSugerida?: string;
   horaSugerida?: string;
   metricasExtraidas?: string;
+  /** Para INCREMENTAR_KPI: cantidad numérica extraída. */
+  cantidadDetectada?: number;
+  /** Para INCREMENTAR_KPI: sustantivo objetivo (lo que se incrementa). */
+  kpiObjetivoTexto?: string;
 }
 
 /** Lista blanca de palabras gatillo aceptadas por el sistema. */
@@ -36,6 +40,9 @@ const VERBOS_VALIDOS = [
   "termine", "terminé", "complete", "completé", "hice", "logre", "logré",
   "habito", "hábito", "leer", "estudiar", "facu", "tp", "parcial",
   "lanzar", "implementar", "construir", "diseñar", "diseno",
+  // Verbos de Quantified Self / KPIs incrementales
+  "comi", "comí", "tome", "tomé", "bebí", "bebi", "sume", "sumé",
+  "registr", "anote", "anoté", "consumí", "consumi",
 ];
 
 const PALABRAS_FUERA_DOMINIO = [
@@ -47,6 +54,8 @@ const PALABRAS_FUERA_DOMINIO = [
 const REGEX_HORA = /\b(\d{1,2})(?::(\d{2}))?\s?(hs|h|am|pm)?\b/i;
 const REGEX_FECHA_REL = /\b(hoy|mañana|manana|pasado mañana|pasado manana|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b/i;
 const REGEX_METRICAS = /(\d+\s?(x|por)\s?\d+|\d+\s?(kg|km|m|min|reps|series|series|sets))/i;
+/** Captura: cantidad + sustantivo objetivo (frutas, vasos de agua, pausas, etc.). */
+const REGEX_INCREMENTO_KPI = /\b(?:com[ií]|tom[eé]|beb[ií]|hice|sum[eé]|anot[eé]|consum[ií]|registr[eé]?)\s+(\d+(?:[.,]\d+)?)\s+([a-záéíóúñ]+(?:\s+(?:de|activas?|de\s+agua))?)/i;
 
 const contienePalabra = (texto: string, lista: ReadonlyArray<string>): boolean => {
   const lower = texto.toLowerCase();
@@ -91,8 +100,12 @@ const extraerHora = (texto: string): string | undefined => {
 
 const inferirIntencion = (texto: string): IntencionIA => {
   const t = texto.toLowerCase();
+  // INCREMENTAR_KPI tiene prioridad: requiere número + verbo de consumo.
+  if (REGEX_INCREMENTO_KPI.test(t) && !/\b(entren[oé]|rutina|sentadill|press|peso muerto|gym)\b/.test(t)) {
+    return "INCREMENTAR_KPI";
+  }
   if (/\b(termin[eé]|complet[eé]|hice|logr[eé])\b/.test(t)) {
-    if (/\b(habito|hábito|rutina diaria|neat|frutas)\b/.test(t)) return "COMPLETAR_HABITO";
+    if (/\b(habito|hábito|rutina diaria|neat)\b/.test(t)) return "COMPLETAR_HABITO";
     return "COMPLETAR_TAREA";
   }
   if (/\b(entren[oé]|rutina|corr[ií]|trote|sentadill|press|peso muerto|gym)\b/.test(t)) return "REGISTRAR_RUTINA";
@@ -165,6 +178,17 @@ export const validarIntencionUsuario = (texto: string): ResultadoEscudo => {
   const horaSugerida = extraerHora(texto);
   const metricasMatch = REGEX_METRICAS.exec(texto)?.[0];
 
+  // Extracción específica para INCREMENTAR_KPI.
+  let cantidadDetectada: number | undefined;
+  let kpiObjetivoTexto: string | undefined;
+  if (intencion === "INCREMENTAR_KPI") {
+    const m = REGEX_INCREMENTO_KPI.exec(texto);
+    if (m) {
+      cantidadDetectada = Number(m[1].replace(",", "."));
+      kpiObjetivoTexto = m[2].trim().toLowerCase();
+    }
+  }
+
   const requiereAgendamiento =
     intencion === "AGENDAR_EVENTO" || Boolean(fechaSugerida) || Boolean(horaSugerida);
 
@@ -179,6 +203,8 @@ export const validarIntencionUsuario = (texto: string): ResultadoEscudo => {
       fechaSugerida,
       horaSugerida,
       metricasExtraidas: metricasMatch,
+      cantidadDetectada,
+      kpiObjetivoTexto,
     },
   };
 };
