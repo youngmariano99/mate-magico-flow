@@ -92,7 +92,14 @@ export interface FileRouteTypes {
     | '/login'
     | '/planificacion'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/baul' | '/evolucion' | '/fitness' | '/kpis' | '/login' | '/planificacion'
+  to:
+    | '/'
+    | '/baul'
+    | '/evolucion'
+    | '/fitness'
+    | '/kpis'
+    | '/login'
+    | '/planificacion'
   id:
     | '__root__'
     | '/'
