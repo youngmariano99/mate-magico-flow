@@ -35,12 +35,16 @@ const PILLS: ReadonlyArray<Pill> = [
  * Input Mágico — captura, valida (Escudo Léxico), simula IA y muestra el
  * Modal de Confirmación. Nunca muta stores por sí mismo: delega en el padre.
  */
-export const InputMagico = ({ onTareaConfirmada }: PropsInputMagico) => {
+export const InputMagico = ({ onTareaConfirmada, onProcesandoChange, onConfirmado }: PropsInputMagico) => {
   const [texto, setTexto] = useState("");
   const [respuestaPendiente, setRespuestaPendiente] = useState<DTO_RespuestaProcesamientoIA | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const baseTextoRef = useRef<string>("");
   const { procesando, procesarEntrada } = useProcesadorMagico();
+
+  useEffect(() => {
+    onProcesandoChange?.(procesando);
+  }, [procesando, onProcesandoChange]);
 
   // Combina el texto pre-existente con la transcripción en vivo.
   const aplicarDictado = useCallback((transcripcion: string, esFinal: boolean) => {
