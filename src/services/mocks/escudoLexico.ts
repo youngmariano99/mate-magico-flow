@@ -26,6 +26,10 @@ export interface AnalisisIntencion {
   fechaSugerida?: string;
   horaSugerida?: string;
   metricasExtraidas?: string;
+  /** Para INCREMENTAR_KPI: cantidad numérica extraída. */
+  cantidadDetectada?: number;
+  /** Para INCREMENTAR_KPI: sustantivo objetivo (lo que se incrementa). */
+  kpiObjetivoTexto?: string;
 }
 
 /** Lista blanca de palabras gatillo aceptadas por el sistema. */
@@ -36,6 +40,9 @@ const VERBOS_VALIDOS = [
   "termine", "terminé", "complete", "completé", "hice", "logre", "logré",
   "habito", "hábito", "leer", "estudiar", "facu", "tp", "parcial",
   "lanzar", "implementar", "construir", "diseñar", "diseno",
+  // Verbos de Quantified Self / KPIs incrementales
+  "comi", "comí", "tome", "tomé", "bebí", "bebi", "sume", "sumé",
+  "registr", "anote", "anoté", "consumí", "consumi",
 ];
 
 const PALABRAS_FUERA_DOMINIO = [
@@ -47,6 +54,8 @@ const PALABRAS_FUERA_DOMINIO = [
 const REGEX_HORA = /\b(\d{1,2})(?::(\d{2}))?\s?(hs|h|am|pm)?\b/i;
 const REGEX_FECHA_REL = /\b(hoy|mañana|manana|pasado mañana|pasado manana|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b/i;
 const REGEX_METRICAS = /(\d+\s?(x|por)\s?\d+|\d+\s?(kg|km|m|min|reps|series|series|sets))/i;
+/** Captura: cantidad + sustantivo objetivo (frutas, vasos de agua, pausas, etc.). */
+const REGEX_INCREMENTO_KPI = /\b(?:com[ií]|tom[eé]|beb[ií]|hice|sum[eé]|anot[eé]|consum[ií]|registr[eé]?)\s+(\d+(?:[.,]\d+)?)\s+([a-záéíóúñ]+(?:\s+(?:de|activas?|de\s+agua))?)/i;
 
 const contienePalabra = (texto: string, lista: ReadonlyArray<string>): boolean => {
   const lower = texto.toLowerCase();

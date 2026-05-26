@@ -15,6 +15,7 @@ const ETIQUETA_INTENCION: Record<IntencionIA, { titulo: string; emoji: string }>
   COMPLETAR_TAREA: { titulo: "Completar tarea", emoji: "🎯" },
   COMPLETAR_HABITO: { titulo: "Completar hábito", emoji: "🔥" },
   REGISTRAR_RUTINA: { titulo: "Registrar rutina", emoji: "🏋️" },
+  INCREMENTAR_KPI: { titulo: "Incrementar KPI", emoji: "🎯" },
 };
 
 /**
