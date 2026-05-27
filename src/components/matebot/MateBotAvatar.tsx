@@ -125,6 +125,61 @@ export const MateBotAvatar = () => {
         onProcesandoChange={handleProcesando}
         onConfirmado={() => setAbierto(false)}
       />
+
+      <div className="space-y-2">
+        <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+          Consultas rápidas
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="justify-start gap-2 h-auto py-2.5 text-left"
+            onClick={() => ejecutarConsulta("AHORA")}
+          >
+            <Target className="size-4 text-primary shrink-0" />
+            <span className="text-xs leading-tight">¿Qué tengo que hacer ahora?</span>
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="justify-start gap-2 h-auto py-2.5 text-left"
+            onClick={() => ejecutarConsulta("COLGADO")}
+          >
+            <AlertTriangle className="size-4 text-primary shrink-0" />
+            <span className="text-xs leading-tight">¿Qué me quedó colgado?</span>
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="justify-start gap-2 h-auto py-2.5 text-left"
+            onClick={() => ejecutarConsulta("BALANCE")}
+          >
+            <Gauge className="size-4 text-primary shrink-0" />
+            <span className="text-xs leading-tight">¿Cómo viene mi balance hoy?</span>
+          </Button>
+        </div>
+        {respuesta && (
+          <div className="relative mt-3 rounded-2xl rounded-tl-sm border border-primary/30 bg-primary/5 px-4 py-3 animate-fade-in">
+            <button
+              type="button"
+              onClick={() => setRespuesta(null)}
+              aria-label="Cerrar respuesta"
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+            >
+              <X size={14} />
+            </button>
+            <p className="font-display text-sm mb-1.5 pr-5">{respuesta.titulo}</p>
+            <p className="text-xs text-foreground/85 whitespace-pre-line leading-relaxed">
+              {respuesta.cuerpo}
+            </p>
+          </div>
+        )}
+      </div>
+
       <div className="space-y-2">
         <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
           Acciones del asistente
