@@ -1,484 +1,437 @@
-# MateFlow — ARCHITECTURE.md
+# MateFlow — Arquitectura y Especificación Técnica
 
-> Blueprint técnico para construir el backend en **C# .NET Minimal APIs** + **PostgreSQL** con acople perfecto al frontend ya implementado.
-> Audiencia: ingenieros backend / arquitectos / IA generadora de código.
-> Filosofía del producto: **fricción cero** — el usuario habla, el sistema clasifica, persiste y devuelve XP.
+> Documento maestro de hand-off entre el frontend (React + TypeScript + Zustand) y el backend objetivo (C# Minimal APIs + PostgreSQL).
+> Audiencia: Tech Leads, Arquitectos Backend, DBAs.
+> Estado del frontend: prototipo completo con persistencia local (mocks). Listo para sustituir mocks por API real.
 
 ---
 
-## 1. Stack Tecnológico del Frontend
+## A. Stack actual (Frontend)
 
-| Capa | Tecnología | Propósito |
+| Capa | Tecnología | Notas |
 |---|---|---|
-| Lenguaje | **TypeScript 5 (strict)** | Tipado total. Prohibido `any`. DTOs como contrato con backend. |
-| UI Framework | **React 19** | Componentes funcionales + hooks. Sin clases. |
-| Bundler / SSR | **Vite 7 + TanStack Start** | File-based routing en `src/routes/`, SSR opcional, code-splitting automático. |
-| Routing | **@tanstack/react-router** | Tipado end-to-end de params, search, loaders. |
-| Estado global | **Zustand + middleware `persist`** | Stores atómicos por dominio (tareas, hábitos, gamificación). Hidratación desde `localStorage`. |
-| Estilos | **Tailwind CSS v4** | Tokens semánticos en `src/styles.css` (`oklch`). Sin colores hardcodeados. |
-| Componentes base | **shadcn/ui + Radix UI** | Dialog, Sheet, Tabs, etc. Accesibles y temabilizables. |
-| Drag & Drop | **@hello-pangea/dnd** | Reordenamiento de MITs y backlog → días en Planificación. |
-| Notificaciones | **Sonner** | Toasts unificados (loading / success / error) para feedback del Procesador Mágico. |
-| PWA | **vite-plugin-pwa** | `manifest.webmanifest` + service worker (deshabilitado en preview). |
-| Auth (mock) | `AuthProvider` propio | Forma `Session` compatible con Supabase Auth para futura migración. |
-| Linting | ESLint + Prettier | Reglas estrictas, formateo consistente. |
+| Framework | **React 19 + TanStack Start** | SSR opcional, file-based routing en `src/routes/`. |
+| Build | **Vite 7** | Cloudflare Worker como runtime serverless. |
+| Lenguaje | **TypeScript estricto** (`strict: true`) | Prohibido `any` en código de dominio. |
+| Estado | **Zustand** con middleware `persist` | Cada slice corresponde a un agregado del dominio. |
+| Estilos | **Tailwind CSS v4** + tokens semánticos en `src/styles.css` | Diseño basado en OKLCH. |
+| UI Kit | **shadcn/ui** + **lucide-react** + **sonner** | Sheets/Popovers responsivos. |
+| Animación | **framer-motion** + SVG keyframes (MateBot) | Sin librerías 3D. |
+| Datos | **TanStack Query** | Reservado para integración con el backend C#. |
+| Voz | **Web Speech API** vía `useDictadoVoz` | Sin dependencia externa. |
+| PWA | Service Worker + manifest | Empaquetado nativo previsto vía **Tauri** (ver §E). |
+
+### Convenciones
+
+- Stores Zustand: namespaced `useXxxStore`, persistidos bajo `mateflow.<dominio>.<version>` en `localStorage`.
+- DTOs en `src/types/dominio.ts` — espejo 1:1 del modelo relacional propuesto en §B.
+- Patrón **Event Sourcing** en `fitnessStore` y `kpisStore` (append-only).
+- Patrón **CRUD clásico** en `tareasStore`, `habitosStore`, `gamificacionStore`.
+- IA centralizada en el componente global **MateBot** (`src/components/matebot/`).
 
 ---
 
-## 2. Arquitectura y Estándares de Código
+## B. Modelo de Datos — PostgreSQL sugerido
 
-### 2.1 Separación de Responsabilidades (SRP)
-
-```text
-src/
-├── routes/              # Pages (TanStack file-based routing)
-├── components/          # UI pura — presentación, sin fetching ni reglas
-│   ├── dashboard/
-│   ├── baul/
-│   ├── planificacion/
-│   ├── evolucion/
-│   └── layout/
-├── hooks/               # Orquestación: useTareas, useHabitos, useProcesadorMagico
-├── stores/              # Zustand: tareasStore, habitosStore, gamificacionStore
-├── services/mocks/      # Adapter: simula latencia + responde DTOs (futuro: HTTP client)
-│   └── escudoLexico.ts  # Servicio puro (sin React, sin Zustand)
-├── auth/                # AuthProvider + GuardiaSesion
-└── types/dominio.ts     # Contratos DTO_*
-```
-
-**Regla de oro:** un componente nunca toca el store directamente para mutar; siempre va a través de un hook (`useTareas.crear()`, etc.). Los hooks nunca contienen reglas de validación: las delegan al servicio (`escudoLexico.ts`).
-
-### 2.2 Patrón Adapter (`src/services/mocks/`)
-
-Hoy los stores Zustand contienen funciones `async` con `setTimeout(350ms)` que **emulan latencia de red**. La firma de cada método es idéntica a la del futuro endpoint REST:
-
-```typescript
-// HOY (mock)
-agregar: (entrada: Omit<DTO_Tarea, "id" | "fechaCreacion" | "estado">) => Promise<DTO_Tarea>;
-
-// MAÑANA (HTTP)
-agregar: (entrada) => fetch("/api/tareas", { method: "POST", body: JSON.stringify(entrada) }).then(r => r.json());
-```
-
-Migrar al backend C# **no requiere tocar ni un solo componente de UI** — únicamente reemplazar el cuerpo de las funciones del store por llamadas `fetch`.
-
-### 2.3 Corralito de Tipado
-
-- `strict: true` + `noImplicitAny` + `noUncheckedIndexedAccess`.
-- Prohibición absoluta de `any`. Donde una librería externa lo introduzca, se acota con `unknown` + type guard.
-- Los DTOs en `src/types/dominio.ts` son **el único contrato** con el backend. Cualquier respuesta del servidor debe validarse contra ellos (futuro: `zod` runtime parsers).
-- Las uniones discriminadas (`IntencionIA`, `CategoriaPARA`, `EstadoTarea`) habilitan exhaustividad en `switch` — agregar una nueva intención falla la compilación hasta tratarla en el Dashboard.
-
----
-
-## 3. Modelo de Datos y Diseño de Base de Datos (PostgreSQL)
-
-### 3.1 DTOs del Frontend (espejo a respetar)
-
-```typescript
-type CategoriaPARA = "Proyecto" | "Area" | "Recurso" | "Archivo";
-type EstadoTarea   = "Activa" | "Completada" | "Archivada";
-
-type IntencionIA =
-  | "AGREGAR_TAREA" | "AGREGAR_NOTA" | "AGENDAR_EVENTO"
-  | "COMPLETAR_TAREA" | "COMPLETAR_HABITO" | "REGISTRAR_RUTINA";
-
-interface DTO_Tarea {
-  id: string;
-  titulo: string;
-  categoria: CategoriaPARA;
-  areaVinculadaId?: string;
-  estado: EstadoTarea;
-  fechaCreacion: string;      // ISO 8601
-  puntosExperiencia: number;
-  fechaProgramada?: string | null;  // YYYY-MM-DD
-  etiquetas?: ReadonlyArray<string>;
-  notasMarkdown?: string;
-}
-
-interface DTO_Habito {
-  id: string;
-  titulo: string;
-  area: string;
-  rachaActual: number;
-  completadoHoy: boolean;
-  xpPorCompletar: number;
-}
-
-interface DTO_PerfilGamificacion {
-  nivel: number;
-  xpActual: number;
-  xpParaSiguienteNivel: number;
-  xpPorArea: ReadonlyArray<{ area: string; xp: number }>;
-  logrosRecientes: ReadonlyArray<{ id: string; descripcion: string; xp: number; fecha: string }>;
-}
-
-interface DTO_RespuestaProcesamientoIA {
-  exito: boolean;
-  intencion: IntencionIA;
-  tareaExtraida: string;
-  categoriaSugerida: CategoriaPARA;
-  tagsDetectados: string[];
-  confianza: number;            // 0.0 .. 1.0
-  requiereAgendamiento: boolean;
-  fechaSugerida?: string;       // YYYY-MM-DD
-  horaSugerida?: string;        // HH:mm
-  metricasExtraidas?: string;
-  objetivoId?: string;
-}
-
-interface DTO_Usuario {
-  id: string; email: string; nombreCompleto: string;
-  avatarUrl: string | null; zonaHoraria: string; fechaRegistro: string;
-}
-```
-
-### 3.2 DER Conceptual
+### Diagrama lógico (DER simplificado)
 
 ```text
-usuarios ──┬──< areas
-           ├──< proyectos
-           ├──< tareas >── areas (FK)
-           │       └──< tareas_etiquetas >── etiquetas
-           ├──< habitos
-           │       └──< habitos_registros (diarios)
-           ├──< logros (XP events)
-           ├──< rutinas_registros (entrenos con métricas JSONB)
-           └──── perfil_gamificacion (1:1)
-
-recursos (notas Segundo Cerebro) >── usuarios
-                                  >── embeddings (pgvector)  [RAG futuro]
+auth.users ──┬──< profiles
+             ├──< areas
+             ├──< tareas ──< adjuntos
+             ├──< habitos ──< habitos_registros
+             ├──< kpis ──< eventos_kpi
+             ├──< eventos_fisicos
+             ├──< plantillas_rutina
+             ├──< gamificacion_perfil
+             └──< gamificacion_logros
 ```
 
-### 3.3 Esquema SQL Sugerido
+### B.1 `profiles` (espejo de `DTO_Usuario`)
 
 ```sql
--- Extensiones requeridas
-CREATE EXTENSION IF NOT EXISTS pgcrypto;   -- gen_random_uuid()
-CREATE EXTENSION IF NOT EXISTS vector;     -- pgvector para RAG semántico
-
--- Enums (espejo de las uniones TS)
-CREATE TYPE categoria_para AS ENUM ('Proyecto', 'Area', 'Recurso', 'Archivo');
-CREATE TYPE estado_tarea   AS ENUM ('Activa', 'Completada', 'Archivada');
-CREATE TYPE intencion_ia   AS ENUM (
-  'AGREGAR_TAREA', 'AGREGAR_NOTA', 'AGENDAR_EVENTO',
-  'COMPLETAR_TAREA', 'COMPLETAR_HABITO', 'REGISTRAR_RUTINA'
+CREATE TABLE profiles (
+  id              uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email           citext NOT NULL UNIQUE,
+  nombre_completo text   NOT NULL,
+  avatar_url      text,
+  zona_horaria    text   NOT NULL DEFAULT 'America/Argentina/Buenos_Aires',
+  fecha_registro  timestamptz NOT NULL DEFAULT now()
 );
-
--- Usuarios (alineado con Supabase Auth: id = auth.users.id)
-CREATE TABLE usuarios (
-  id              UUID PRIMARY KEY,
-  email           CITEXT UNIQUE NOT NULL,
-  nombre_completo TEXT NOT NULL,
-  avatar_url      TEXT,
-  zona_horaria    TEXT NOT NULL DEFAULT 'America/Argentina/Buenos_Aires',
-  fecha_registro  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Áreas de vida (Salud, Finanzas, Facultad, Idiomas, MateFlow, …)
-CREATE TABLE areas (
-  id          TEXT PRIMARY KEY,          -- slug: 'salud', 'finanzas'
-  usuario_id  UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  nombre      TEXT NOT NULL,
-  color_hex   TEXT
-);
-
--- Proyectos (subset de "Categoria=Proyecto" con metadata extra)
-CREATE TABLE proyectos (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  area_id         TEXT REFERENCES areas(id),
-  titulo          TEXT NOT NULL,
-  descripcion     TEXT,
-  fecha_objetivo  DATE,
-  fecha_creacion  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Tareas (tabla central — espejo de DTO_Tarea)
-CREATE TABLE tareas (
-  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  usuario_id          UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  titulo              TEXT NOT NULL,
-  categoria           categoria_para NOT NULL,
-  area_vinculada_id   TEXT REFERENCES areas(id),
-  proyecto_id         UUID REFERENCES proyectos(id) ON DELETE SET NULL,
-  estado              estado_tarea NOT NULL DEFAULT 'Activa',
-  fecha_creacion      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  fecha_programada    DATE,                              -- NULL = backlog
-  puntos_experiencia  INT NOT NULL DEFAULT 10,
-  notas_markdown      TEXT,
-  orden_mit           INT,                               -- orden manual en Dashboard
-  CHECK (puntos_experiencia >= 0)
-);
-CREATE INDEX idx_tareas_usuario_estado ON tareas(usuario_id, estado);
-CREATE INDEX idx_tareas_programada     ON tareas(usuario_id, fecha_programada);
-
--- Etiquetas (Segundo Cerebro)
-CREATE TABLE etiquetas (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  usuario_id  UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  nombre      TEXT NOT NULL,
-  UNIQUE (usuario_id, nombre)
-);
-CREATE TABLE tareas_etiquetas (
-  tarea_id    UUID NOT NULL REFERENCES tareas(id) ON DELETE CASCADE,
-  etiqueta_id UUID NOT NULL REFERENCES etiquetas(id) ON DELETE CASCADE,
-  PRIMARY KEY (tarea_id, etiqueta_id)
-);
-
--- Hábitos atómicos
-CREATE TABLE habitos (
-  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  usuario_id        UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  titulo            TEXT NOT NULL,
-  area_id           TEXT REFERENCES areas(id),
-  xp_por_completar  INT NOT NULL DEFAULT 5,
-  racha_actual      INT NOT NULL DEFAULT 0,
-  fecha_creacion    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Registros diarios (1 row por hábito por día → permite calcular rachas reales)
-CREATE TABLE habitos_registros (
-  habito_id     UUID NOT NULL REFERENCES habitos(id) ON DELETE CASCADE,
-  fecha         DATE NOT NULL,
-  completado    BOOLEAN NOT NULL DEFAULT true,
-  PRIMARY KEY (habito_id, fecha)
-);
-
--- Rutinas de entrenamiento (intención REGISTRAR_RUTINA)
-CREATE TABLE rutinas_registros (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  fecha           TIMESTAMPTZ NOT NULL DEFAULT now(),
-  texto_original  TEXT NOT NULL,                       -- "Terminé rutina 2x5 sentadillas 80kg"
-  metricas        JSONB NOT NULL                        -- {ejercicios:[{nombre,series,reps,kg}], distancia_km, tiempo_min}
-);
-CREATE INDEX idx_rutinas_metricas ON rutinas_registros USING GIN (metricas);
-
--- Recursos / Notas del Segundo Cerebro (con RAG)
-CREATE TABLE recursos (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  titulo          TEXT NOT NULL,
-  contenido_md    TEXT NOT NULL,
-  fecha_creacion  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  embedding       VECTOR(1536)                          -- pgvector, OpenAI/Groq embeddings
-);
-CREATE INDEX idx_recursos_embedding ON recursos
-  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-
--- Gamificación
-CREATE TABLE perfil_gamificacion (
-  usuario_id                UUID PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
-  nivel                     INT NOT NULL DEFAULT 1,
-  xp_actual                 INT NOT NULL DEFAULT 0,
-  xp_para_siguiente_nivel   INT NOT NULL DEFAULT 100
-);
-
-CREATE TABLE xp_por_area (
-  usuario_id  UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  area_id     TEXT NOT NULL REFERENCES areas(id),
-  xp_total    INT NOT NULL DEFAULT 0,
-  PRIMARY KEY (usuario_id, area_id)
-);
-
-CREATE TABLE logros (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  usuario_id   UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  descripcion  TEXT NOT NULL,
-  xp           INT NOT NULL,
-  area_id      TEXT REFERENCES areas(id),
-  fecha        TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX idx_logros_usuario_fecha ON logros(usuario_id, fecha DESC);
 ```
 
-### 3.4 Notas de Diseño BD
+### B.2 `areas` (PARA — Areas)
 
-- **JSONB en `rutinas_registros.metricas`**: el formato de las métricas evolucionará rápido (powerlifting, running, ciclismo). JSONB + índice GIN permite consultas estructuradas sin migraciones.
-- **`pgvector`**: cada nota del Segundo Cerebro genera un embedding al guardar/editar. Búsqueda semántica vía `ORDER BY embedding <=> $query`. Necesario para el futuro RAG "preguntale a tu segundo cerebro".
-- **`fecha_programada DATE NULL`**: única columna que separa Backlog (NULL) de Calendario Semanal (con fecha).
-- **`auth.users.id` = `usuarios.id`**: si el backend C# se monta sobre Supabase Auth, el FK es directo. Si no, `usuarios.id` es el UUID emitido por el IdP propio.
+```sql
+CREATE TABLE areas (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  slug        text NOT NULL,                       -- ej: "salud", "facultad"
+  titulo      text NOT NULL,
+  color_oklch text,
+  UNIQUE (user_id, slug)
+);
+```
+
+### B.3 `tareas` (espejo de `DTO_Tarea`)
+
+```sql
+CREATE TYPE categoria_para AS ENUM ('Proyecto','Area','Recurso','Archivo');
+CREATE TYPE estado_tarea  AS ENUM ('Activa','Completada','Archivada');
+
+CREATE TABLE tareas (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id             uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  titulo              text NOT NULL,
+  categoria           categoria_para NOT NULL,
+  area_vinculada_id   uuid REFERENCES areas(id) ON DELETE SET NULL,
+  estado              estado_tarea NOT NULL DEFAULT 'Activa',
+  fecha_creacion      timestamptz NOT NULL DEFAULT now(),
+  fecha_programada    date,                         -- NULL => backlog
+  puntos_experiencia  int NOT NULL DEFAULT 10 CHECK (puntos_experiencia >= 0),
+  etiquetas           text[] NOT NULL DEFAULT '{}',
+  notas_markdown      text,
+  orden_mit           int                            -- usado por reordenarMITs()
+);
+
+CREATE INDEX idx_tareas_user_estado ON tareas (user_id, estado);
+CREATE INDEX idx_tareas_user_fecha  ON tareas (user_id, fecha_programada);
+CREATE INDEX idx_tareas_etiquetas   ON tareas USING GIN (etiquetas);
+```
+
+### B.4 `adjuntos` (espejo de `DTO_ArchivoAdjunto`)
+
+```sql
+CREATE TYPE tipo_icono_adjunto AS ENUM ('pdf','doc','sheet','slide','img','link','otro');
+
+CREATE TABLE adjuntos (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tarea_id         uuid NOT NULL REFERENCES tareas(id) ON DELETE CASCADE,
+  nombre           text NOT NULL,
+  url              text NOT NULL,
+  tipo_icono       tipo_icono_adjunto NOT NULL,
+  fecha_adjuntado  timestamptz NOT NULL DEFAULT now()
+);
+```
+
+### B.5 `habitos` y `habitos_registros`
+
+```sql
+CREATE TABLE habitos (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  titulo            text NOT NULL,
+  area              text NOT NULL,
+  xp_por_completar  int  NOT NULL DEFAULT 5
+);
+
+-- `rachaActual` y `completadoHoy` NO se guardan: se calculan al vuelo.
+CREATE TABLE habitos_registros (
+  id          bigserial PRIMARY KEY,
+  habito_id   uuid NOT NULL REFERENCES habitos(id) ON DELETE CASCADE,
+  fecha       date NOT NULL,
+  UNIQUE (habito_id, fecha)
+);
+CREATE INDEX idx_habitos_registros_fecha ON habitos_registros (habito_id, fecha DESC);
+```
+
+### B.6 `eventos_fisicos` y `plantillas_rutina` (Event Sourcing — Fitness)
+
+```sql
+CREATE TYPE tipo_evento_fisico AS ENUM ('NEAT','PAUSA_ACTIVA','ENTRENAMIENTO');
+
+CREATE TABLE plantillas_rutina (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  titulo          text NOT NULL,
+  ejercicios      jsonb NOT NULL DEFAULT '[]'::jsonb,  -- array de strings
+  fecha_creacion  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE eventos_fisicos (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  fecha_hora    timestamptz NOT NULL DEFAULT now(),
+  tipo_evento   tipo_evento_fisico NOT NULL,
+  metricas      text NOT NULL,
+  plantilla_id  uuid REFERENCES plantillas_rutina(id) ON DELETE SET NULL,
+  xp_otorgado   int  NOT NULL
+);
+-- APPEND-ONLY: NO se permiten UPDATE/DELETE (forzado por REVOKE + trigger).
+REVOKE UPDATE, DELETE ON eventos_fisicos FROM PUBLIC;
+CREATE INDEX idx_eventos_fisicos_user_fh ON eventos_fisicos (user_id, fecha_hora DESC);
+```
+
+### B.7 `kpis` y `eventos_kpi` (Quantified Self)
+
+```sql
+CREATE TYPE frecuencia_kpi AS ENUM ('DIARIO','SEMANAL','MENSUAL');
+CREATE TYPE fuente_evento_kpi AS ENUM ('MANUAL','INCREMENTO_RAPIDO','IA');
+
+CREATE TABLE kpis (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  titulo          text NOT NULL,
+  area            text NOT NULL,
+  objetivo        numeric(10,2) NOT NULL CHECK (objetivo > 0),
+  unidad          text NOT NULL,
+  frecuencia      frecuencia_kpi NOT NULL,
+  grupo           text,
+  color_acento    text,
+  fecha_creacion  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE eventos_kpi (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  kpi_id      uuid NOT NULL REFERENCES kpis(id) ON DELETE CASCADE,
+  fecha_hora  timestamptz NOT NULL DEFAULT now(),
+  cantidad    numeric(10,2) NOT NULL CHECK (cantidad > 0),
+  fuente      fuente_evento_kpi NOT NULL,
+  nota        text
+);
+-- APPEND-ONLY igual que eventos_fisicos.
+CREATE INDEX idx_eventos_kpi_kpi_fh ON eventos_kpi (kpi_id, fecha_hora DESC);
+```
+
+### B.8 Gamificación
+
+```sql
+CREATE TABLE gamificacion_perfil (
+  user_id                 uuid PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  nivel                   int NOT NULL DEFAULT 1,
+  xp_actual               int NOT NULL DEFAULT 0,
+  xp_para_siguiente_nivel int NOT NULL DEFAULT 100,
+  xp_por_area             jsonb NOT NULL DEFAULT '[]'::jsonb  -- [{area, xp}]
+);
+
+CREATE TABLE gamificacion_logros (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  descripcion text NOT NULL,
+  xp          int  NOT NULL,
+  area        text,
+  fecha       timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_logros_user_fecha ON gamificacion_logros (user_id, fecha DESC);
+```
+
+**Decisión JSONB vs columnas:** `etiquetas` se modela como `text[]` (consultable con GIN). `xp_por_area` se mantiene como `jsonb` porque es estructura agregada, raramente filtrada por área individual desde SQL.
 
 ---
 
-## 4. Contratos de API (Especificación para Backend C# .NET Minimal APIs)
+## C. Contratos de API (C# Minimal APIs)
 
-Convenciones:
-- Base URL: `/api/v1`
-- Auth: `Authorization: Bearer <jwt>` en todas las rutas excepto `/auth/*`.
-- Códigos: `200` OK, `201` Created, `400` Validation, `401` Unauthorized, `404` Not Found, `422` Lexical Shield Rejection.
-- Latencia tolerada por la UI: ~350 ms (mock actual). Excederla degrada UX.
+> Convenciones: `Content-Type: application/json`. Autenticación: `Authorization: Bearer <jwt>` (Supabase-compatible o Identity propio). Todos los endpoints scopean por `user_id` derivado del token. Códigos: 200 OK, 201 Created, 204 No Content, 400 Validación, 401 Auth, 404 No encontrado, 422 Léxico rechazado.
 
-### 4.1 Tareas
+### C.1 Tareas
 
-| Método | Ruta | Mock equivalente |
+| Método | Ruta | Descripción |
 |---|---|---|
-| `GET`    | `/api/v1/tareas` | `obtenerTodas()` |
-| `GET`    | `/api/v1/tareas?estado=Activa` | `obtenerActivas()` |
-| `GET`    | `/api/v1/tareas?categoria=Proyecto` | `obtenerPorCategoria()` |
-| `POST`   | `/api/v1/tareas` | `agregar()` |
-| `PATCH`  | `/api/v1/tareas/{id}/estado` | `cambiarEstado()` |
-| `PATCH`  | `/api/v1/tareas/{id}/agenda` | `moverTarea()` |
-| `PATCH`  | `/api/v1/tareas/{id}/notas` | `actualizarNotas()` |
-| `PUT`    | `/api/v1/tareas/mits/orden` | `reordenarMITs()` |
+| `GET`    | `/api/tareas?estado=Activa&categoria=Proyecto` | Lista filtrada |
+| `POST`   | `/api/tareas` | Crear tarea |
+| `PATCH`  | `/api/tareas/{id}/estado` | Cambiar `estado` |
+| `PATCH`  | `/api/tareas/{id}/programar` | Mover a fecha o backlog |
+| `PATCH`  | `/api/tareas/{id}/notas` | Editar markdown + etiquetas |
+| `POST`   | `/api/tareas/{id}/adjuntos` | Adjuntar archivo (mock Drive) |
+| `POST`   | `/api/tareas/mits/orden` | Persistir orden manual MITs |
 
-**POST /api/v1/tareas — Request:**
+**POST `/api/tareas` — Request:**
 ```json
 {
-  "titulo": "Terminar TP de Algoritmos",
-  "categoria": "Proyecto",
-  "areaVinculadaId": "facultad",
-  "puntosExperiencia": 40,
-  "etiquetas": ["UTN", "Algoritmos"],
-  "notasMarkdown": "## Objetivo..."
+  "titulo": "Revisar gastos del mes",
+  "categoria": "Area",
+  "areaVinculadaId": "9f...uuid",
+  "puntosExperiencia": 10,
+  "etiquetas": ["#Finanzas"],
+  "fechaProgramada": "2026-05-28",
+  "notasMarkdown": null
 }
 ```
-**Response 201 — debe matchear `DTO_Tarea` exactamente:**
+**Response 201:**
 ```json
 {
-  "id": "a3f0...",
-  "titulo": "Terminar TP de Algoritmos",
-  "categoria": "Proyecto",
-  "areaVinculadaId": "facultad",
+  "id": "t-3f7a1b9",
+  "titulo": "Revisar gastos del mes",
+  "categoria": "Area",
+  "areaVinculadaId": "9f...uuid",
   "estado": "Activa",
-  "fechaCreacion": "2026-05-23T14:32:01.000Z",
-  "puntosExperiencia": 40,
-  "fechaProgramada": null,
-  "etiquetas": ["UTN", "Algoritmos"],
-  "notasMarkdown": "## Objetivo..."
+  "fechaCreacion": "2026-05-27T10:14:22Z",
+  "fechaProgramada": "2026-05-28",
+  "puntosExperiencia": 10,
+  "etiquetas": ["#Finanzas"],
+  "adjuntos": []
 }
 ```
 
-### 4.2 Endpoint Crítico: Procesamiento Mágico (IA)
+### C.2 Hábitos
 
-**Ruta:** `POST /api/v1/ia/procesar`
-**Controlador:** `MagicInputController.Procesar`
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET`  | `/api/habitos` | Devuelve hábitos con `rachaActual` y `completadoHoy` calculados |
+| `POST` | `/api/habitos` | Crear hábito |
+| `POST` | `/api/habitos/{id}/toggle?fecha=YYYY-MM-DD` | Marcar/desmarcar el día (idempotente) |
 
-**Request:**
+**Response `GET /api/habitos`:**
 ```json
-{ "textoCrudo": "Terminé rutina 2x5 sentadillas 80kg" }
+[
+  { "id": "h-neat", "titulo": "Actividad NEAT", "area": "salud",
+    "rachaActual": 12, "completadoHoy": false, "xpPorCompletar": 8 }
+]
 ```
 
-**Response 200 — `DTO_RespuestaProcesamientoIA`:**
+### C.3 Fitness (Event Sourcing)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET`  | `/api/fitness/eventos?desde=YYYY-MM-DD&hasta=YYYY-MM-DD` | Historial paginado |
+| `POST` | `/api/fitness/eventos` | Append de evento (`NEAT`, `PAUSA_ACTIVA`, `ENTRENAMIENTO`) |
+| `GET`  | `/api/fitness/plantillas` | Listar plantillas |
+| `POST` | `/api/fitness/plantillas` | Crear plantilla |
+| `PUT`  | `/api/fitness/plantillas/{id}` | Editar plantilla (no afecta eventos pasados) |
+| `DELETE` | `/api/fitness/plantillas/{id}` | Borrar plantilla |
+
+**POST `/api/fitness/eventos` — Request:**
+```json
+{ "tipoEvento": "ENTRENAMIENTO", "metricas": "Push — Banca 3x8 70kg", "plantillaId": "pl-push" }
+```
+
+### C.4 KPIs (Quantified Self)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET`  | `/api/kpis` | Listar definiciones |
+| `POST` | `/api/kpis` | Crear KPI |
+| `DELETE` | `/api/kpis/{id}` | Borrar KPI (cascade a eventos_kpi) |
+| `POST` | `/api/kpis/{id}/eventos` | Append de incremento |
+| `GET`  | `/api/kpis/{id}/agregado?vista=DIA\|SEMANA\|MES` | Suma escalada al período |
+
+**POST `/api/kpis/{id}/eventos` — Request:**
+```json
+{ "cantidad": 2, "fuente": "IA", "nota": "Comí 2 frutas en el almuerzo" }
+```
+
+### C.5 Gamificación
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET`  | `/api/gamificacion/perfil` | Nivel, XP, distribución por área |
+| `GET`  | `/api/gamificacion/logros?limit=20` | Logros recientes |
+
+> Los logros se generan **server-side** como side-effect de los endpoints que otorgan XP (tareas completadas, hábitos toggleados, eventos fitness/KPI). El cliente NO escribe directamente en gamificación.
+
+### C.6 IA — Procesador Mágico
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/api/ia/procesar` | Entrada cruda → intención estructurada |
+| `POST` | `/api/ia/resumen-semanal` | Genera el informe ejecutivo compasivo |
+| `POST` | `/api/ia/consulta-rapida` | (Opcional v2) Resuelve las Consultas Rápidas del MateBot |
+
+**POST `/api/ia/procesar` — Request:**
+```json
+{ "texto": "Mañana 9am reunión con el cliente del taller mecánico" }
+```
+**Response (espejo de `DTO_RespuestaProcesamientoIA`):**
 ```json
 {
   "exito": true,
-  "intencion": "REGISTRAR_RUTINA",
-  "tareaExtraida": "Terminé rutina 2x5 sentadillas 80kg",
-  "categoriaSugerida": "Area",
-  "tagsDetectados": ["Salud"],
-  "confianza": 0.91,
-  "requiereAgendamiento": false,
-  "metricasExtraidas": "2x5 sentadillas 80kg"
+  "intencion": "AGENDAR_EVENTO",
+  "tareaExtraida": "Reunión con cliente del taller mecánico",
+  "categoriaSugerida": "Proyecto",
+  "tagsDetectados": ["#TallerMecánico", "#Reunión"],
+  "confianza": 0.92,
+  "requiereAgendamiento": true,
+  "fechaSugerida": "2026-05-28",
+  "horaSugerida": "09:00",
+  "metricasExtraidas": null,
+  "cantidadDetectada": null,
+  "kpiObjetivoTexto": null
 }
 ```
 
-**Response 422 — Rechazo del Escudo Léxico:**
-```json
-{
-  "exito": false,
-  "razon": "Solo gestiono tareas, proyectos, notas, agenda, hábitos y rutinas.",
-  "tipo": "RECHAZADO"
-}
-```
+**Intenciones soportadas:** `AGREGAR_TAREA`, `AGREGAR_NOTA`, `AGENDAR_EVENTO`, `COMPLETAR_TAREA`, `COMPLETAR_HABITO`, `REGISTRAR_RUTINA`, `INCREMENTAR_KPI`.
 
-#### Pipeline obligatorio del backend C#
+---
 
-El frontend ya tiene un mock del Escudo (`src/services/mocks/escudoLexico.ts`) que es la **referencia funcional canónica**. El backend debe replicar el pipeline:
+## D. El Escudo Léxico (responsabilidad del backend)
+
+El frontend implementa `src/services/mocks/escudoLexico.ts` como capa cero-latencia que **rechaza entradas inválidas antes de gastar tokens en la LLM**. En producción, esta lógica debe migrar al backend C# como middleware previo a la llamada a **Groq**.
+
+### Contrato funcional
 
 ```text
-        ┌────────────────────────────────────────────────┐
-POST ──▶│ 1. Validación HTTP (FluentValidation)          │
-        │    - textoCrudo no vacío, max 500 chars        │
-        └────────────────────────────────────────────────┘
-                          ▼
-        ┌────────────────────────────────────────────────┐
-        │ 2. ESCUDO LÉXICO (síncrono, 0 ms)              │
-        │    - Regex blacklist: "haz una imagen", etc.   │
-        │    - Whitelist de verbos: agendar, comprar, …  │
-        │    - Si falla → 422 inmediato (NO llama a IA)  │
-        └────────────────────────────────────────────────┘
-                          ▼ (aprobado)
-        ┌────────────────────────────────────────────────┐
-        │ 3. CLIENTE GROQ (HttpClient + Polly retry)     │
-        │    - Modelo: llama-3.1-70b-versatile           │
-        │    - System prompt: schema JSON estricto       │
-        │    - response_format: { type: "json_object" }  │
-        └────────────────────────────────────────────────┘
-                          ▼
-        ┌────────────────────────────────────────────────┐
-        │ 4. POST-VALIDACIÓN del JSON de Groq            │
-        │    - Deserializar a DTO_RespuestaProcesamientoIA│
-        │    - Si `intencion` no está en el enum → 422   │
-        │    - Defensa contra alucinaciones de campos    │
-        └────────────────────────────────────────────────┘
-                          ▼
-        ┌────────────────────────────────────────────────┐
-        │ 5. Audit log en tabla `ia_procesamientos`      │
-        │    (texto_crudo, respuesta_json, latencia_ms)  │
-        └────────────────────────────────────────────────┘
-                          ▼
-                       200 OK
+texto crudo ──► [1. Sanitización] ──► [2. Heurística regex] ──► [3. Decisión]
+                                                                 │
+                                                                 ├─► Match local fuerte ⇒ responder sin llamar a Groq
+                                                                 ├─► Match parcial      ⇒ llamar a Groq con prompt enriquecido
+                                                                 └─► Rechazo léxico     ⇒ 422 sin llamar a Groq
 ```
 
-> **Importante:** el endpoint **NO muta estado**. Solo clasifica. La mutación efectiva (insert en `tareas`, `habitos_registros`, `rutinas_registros`, …) la dispara el frontend en un segundo round-trip tras la confirmación del usuario en el `ModalConfirmacionMagica`. Esto preserva el flujo Human-in-the-loop.
+### Implementación sugerida (C# pseudocódigo)
 
-### 4.3 Hábitos
-
-| Método | Ruta | Mock |
-|---|---|---|
-| `GET`   | `/api/v1/habitos` | `useHabitosStore.habitos` |
-| `POST`  | `/api/v1/habitos/{id}/toggle` | `alternarEstadoHabito()` |
-| `POST`  | `/api/v1/habitos/reset-diario` | `resetearDia()` (job nocturno, no endpoint en prod) |
-
-**POST /api/v1/habitos/{id}/toggle — Response:**
-```json
+```csharp
+public sealed class EscudoLexicoMiddleware
 {
-  "id": "h-neat",
-  "titulo": "Actividad NEAT",
-  "area": "salud",
-  "rachaActual": 13,
-  "completadoHoy": true,
-  "xpPorCompletar": 8
+    private static readonly Regex IncrementoKpi =
+        new(@"\b(?:com[ií]|tom[eé]|hice|sum[eé])\s+(\d+(?:[.,]\d+)?)\s+([a-zñ]+)",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    public async Task<IntencionResolucion> EvaluarAsync(string texto)
+    {
+        if (string.IsNullOrWhiteSpace(texto) || texto.Length > 500)
+            return IntencionResolucion.Rechazo("Entrada vacía o demasiado larga");
+
+        // 1) Patrones locales con confianza alta — bypassean a Groq.
+        var m = IncrementoKpi.Match(texto);
+        if (m.Success)
+            return IntencionResolucion.LocalFuerte(new RespuestaIA {
+                Intencion = "INCREMENTAR_KPI",
+                CantidadDetectada = decimal.Parse(m.Groups[1].Value.Replace(',', '.')),
+                KpiObjetivoTexto  = m.Groups[2].Value,
+                Confianza = 0.95m
+            });
+
+        // 2) Heurísticas adicionales (AGENDAR_EVENTO con "mañana/hoy/HH:mm", etc.).
+        // 3) Fallback ⇒ llamar a Groq con prompt sistema fijado.
+        return IntencionResolucion.EscalarAGroq(texto);
+    }
 }
 ```
 
-### 4.4 Gamificación
+### Beneficios
 
-| Método | Ruta | Mock |
-|---|---|---|
-| `GET`   | `/api/v1/gamificacion/perfil` | `useGamificacionStore.perfil` |
-| `POST`  | `/api/v1/gamificacion/logros` | `registrarLogro()` |
-
-**POST /api/v1/gamificacion/logros — Request:**
-```json
-{ "descripcion": "Rutina completada", "xp": 20, "area": "Salud" }
-```
-**Response 200 — `DTO_PerfilGamificacion` actualizado** (la UI re-renderiza el `PanelGamificacion` con la respuesta).
-
-### 4.5 Auth
-
-| Método | Ruta | Notas |
-|---|---|---|
-| `POST` | `/api/v1/auth/login` | Body: `{ email, password }` → `DTO_Sesion` |
-| `POST` | `/api/v1/auth/logout` | Invalida refresh token |
-| `POST` | `/api/v1/auth/refresh` | Rota access token |
-| `GET`  | `/api/v1/auth/me` | `DTO_Usuario` del JWT |
-
-`DTO_Sesion` es deliberadamente compatible con Supabase para permitir migrar a Supabase Auth sin tocar `AuthProvider`.
+- **Coste**: ~70 % de los inputs frecuentes se resuelven sin LLM.
+- **Latencia**: respuestas <10 ms para patrones cubiertos.
+- **Seguridad**: filtra prompt injection antes de tocar el modelo.
+- **Trazabilidad**: cada respuesta marca `fuente: "LOCAL" | "LLM"`.
 
 ---
 
-## 5. Checklist de Acople Frontend ↔ Backend
+## E. El Futuro Nativo
 
-- [ ] Todos los nombres de campos en las respuestas JSON usan **camelCase** (no snake_case) — la UI no transforma.
-- [ ] Enums (`categoria`, `estado`, `intencion`) devuelven el **string exacto** del enum TS (case-sensitive).
-- [ ] Fechas: `ISO 8601 UTC` para timestamps, `YYYY-MM-DD` para `fechaProgramada`.
-- [ ] El endpoint `/api/v1/ia/procesar` **nunca** persiste — solo clasifica.
-- [ ] El Escudo Léxico vive en el backend y rechaza con `422` antes de gastar tokens de Groq.
-- [ ] Toda mutación devuelve la entidad completa (no `204 No Content`) para que Zustand reemplace el item sin re-fetch.
+> Más adelante, al empaquetar el front con **Tauri** y conectarlo al backend en C#, se compilará una aplicación nativa liviana para Windows/Mac. Esto permitirá soportar la función **"Always on Top"** (Siempre al frente) o que el sistema viva directamente en la barra de tareas (**System Tray**) como un asistente omnipresente.
+
+### Implicaciones técnicas
+
+- El **Modo Compacto** (viewport ≤ 360px) ya implementado en `__root.tsx` se convierte en el **Widget Mode** de la ventana flotante de Tauri: la app se reduce a MateBot + bocadillo, sin nav ni dashboard.
+- El **API client** se reemplaza por llamadas HTTP al backend C# alojado en el VPS/Render/Fly; los DTOs son idénticos a los actuales — cero refactor.
+- La **Web Speech API** se sustituye por bindings nativos (`tauri-plugin-mic`) cuando se requiera dictado offline.
+- El **Service Worker** PWA se mantiene como fallback web; Tauri ignora el SW y carga assets desde el bundle.
+- **Atajos globales** (`tauri-plugin-global-shortcut`): `Ctrl+Space` invoca al MateBot desde cualquier app, materializando la promesa de "fricción cero".
 
 ---
 
-**Fin del documento.** Este blueprint es suficiente para iniciar el sprint de backend sin reuniones de aclaración.
+## Apéndice — Estado actual de las stores
+
+| Store | Patrón | Persistencia (`localStorage`) | Endpoints C# objetivo |
+|---|---|---|---|
+| `tareasStore` | CRUD | `mateflow.tareas.v2` | `/api/tareas/*` |
+| `habitosStore` | CRUD + toggle diario | `mateflow.habitos.v1` | `/api/habitos/*` |
+| `fitnessStore` | **Event Sourcing** | `mateflow.fitness.v1` | `/api/fitness/*` |
+| `kpisStore` | **Event Sourcing** | `mateflow.kpis.v1` | `/api/kpis/*` |
+| `gamificacionStore` | Append (calculada) | `mateflow.gamificacion.v1` | `/api/gamificacion/*` (read-only) |
+
+---
+
+**Documento mantenido por:** Tech Lead Frontend MateFlow.
+**Próxima revisión:** al iniciar el sprint de backend C#.
