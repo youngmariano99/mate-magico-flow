@@ -130,8 +130,13 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Outlet />
-        <BotonAccionFlotante />
+        {/* Modo Compacto (Widget): bajo ~360px de viewport ocultamos
+            la app entera y dejamos solo al MateBot centrado, permitiendo
+            usar la PWA como widget lateral. */}
+        <div className="max-[360px]:hidden contents">
+          <Outlet />
+          <BotonAccionFlotante />
+        </div>
         <MateBotAvatar />
         <Toaster
           position="top-right"
