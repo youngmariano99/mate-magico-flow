@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { BarChart3, Sparkles, X } from "lucide-react";
+import { AlertTriangle, BarChart3, Gauge, Sparkles, Target, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/auth/AuthProvider";
 import {
@@ -16,6 +16,11 @@ import { InputMagico } from "@/components/dashboard/InputMagico";
 import { ResumenSemanalIA } from "@/components/dashboard/ResumenSemanalIA";
 import { MateBotIcon, type EstadoMateBot } from "./MateBotIcon";
 import { useManejarConfirmacionMagica } from "@/hooks/useManejarConfirmacionMagica";
+import {
+  useConsultasAsistente,
+  type RespuestaConsulta,
+  type TipoConsulta,
+} from "@/hooks/useConsultasAsistente";
 
 /**
  * MateBotAvatar — FAB global que concentra TODA la superficie de IA
@@ -45,8 +50,19 @@ export const MateBotAvatar = () => {
   const [estado, setEstado] = useState<EstadoMateBot>("idle");
   const [mostrarSaludo, setMostrarSaludo] = useState(false);
   const [indiceSaludo, setIndiceSaludo] = useState(0);
+  const [respuesta, setRespuesta] = useState<RespuestaConsulta | null>(null);
+  const { responder } = useConsultasAsistente();
 
   const saludo = useMemo(() => SALUDOS[indiceSaludo % SALUDOS.length], [indiceSaludo]);
+
+  const ejecutarConsulta = useCallback(
+    (tipo: TipoConsulta) => setRespuesta(responder(tipo)),
+    [responder],
+  );
+
+  useEffect(() => {
+    if (!abierto) setRespuesta(null);
+  }, [abierto]);
 
   // Mostrar el bocadillo de saludo cada ~22 s cuando la consola está cerrada.
   useEffect(() => {
@@ -75,9 +91,9 @@ export const MateBotAvatar = () => {
   if (!usuario) return null;
 
   const Disparador = (
-    <div className="fixed z-40 bottom-[88px] md:bottom-6 right-5 flex flex-col items-end gap-2">
+    <div className="fixed z-40 bottom-[88px] md:bottom-6 right-5 flex flex-col items-end gap-2 max-[360px]:inset-0 max-[360px]:bottom-auto max-[360px]:right-auto max-[360px]:flex max-[360px]:items-center max-[360px]:justify-center">
       {mostrarSaludo && !abierto && (
-        <div className="animate-fade-in mb-1 max-w-[220px] rounded-2xl rounded-br-sm border border-border bg-card/95 backdrop-blur px-3 py-2 text-xs text-foreground shadow-xl">
+        <div className="animate-fade-in mb-1 max-w-[220px] rounded-2xl rounded-br-sm border border-border bg-card/95 backdrop-blur px-3 py-2 text-xs text-foreground shadow-xl max-[360px]:hidden">
           <span aria-hidden className="mr-1">💬</span>
           {saludo}
         </div>
@@ -109,6 +125,61 @@ export const MateBotAvatar = () => {
         onProcesandoChange={handleProcesando}
         onConfirmado={() => setAbierto(false)}
       />
+
+      <div className="space-y-2">
+        <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+          Consultas rápidas
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="justify-start gap-2 h-auto py-2.5 text-left"
+            onClick={() => ejecutarConsulta("AHORA")}
+          >
+            <Target className="size-4 text-primary shrink-0" />
+            <span className="text-xs leading-tight">¿Qué tengo que hacer ahora?</span>
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="justify-start gap-2 h-auto py-2.5 text-left"
+            onClick={() => ejecutarConsulta("COLGADO")}
+          >
+            <AlertTriangle className="size-4 text-primary shrink-0" />
+            <span className="text-xs leading-tight">¿Qué me quedó colgado?</span>
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="justify-start gap-2 h-auto py-2.5 text-left"
+            onClick={() => ejecutarConsulta("BALANCE")}
+          >
+            <Gauge className="size-4 text-primary shrink-0" />
+            <span className="text-xs leading-tight">¿Cómo viene mi balance hoy?</span>
+          </Button>
+        </div>
+        {respuesta && (
+          <div className="relative mt-3 rounded-2xl rounded-tl-sm border border-primary/30 bg-primary/5 px-4 py-3 animate-fade-in">
+            <button
+              type="button"
+              onClick={() => setRespuesta(null)}
+              aria-label="Cerrar respuesta"
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+            >
+              <X size={14} />
+            </button>
+            <p className="font-display text-sm mb-1.5 pr-5">{respuesta.titulo}</p>
+            <p className="text-xs text-foreground/85 whitespace-pre-line leading-relaxed">
+              {respuesta.cuerpo}
+            </p>
+          </div>
+        )}
+      </div>
+
       <div className="space-y-2">
         <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
           Acciones del asistente
