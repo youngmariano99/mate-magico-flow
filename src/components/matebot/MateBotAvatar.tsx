@@ -91,9 +91,9 @@ export const MateBotAvatar = () => {
   if (!usuario) return null;
 
   const Disparador = (
-    <div className="fixed z-40 bottom-[88px] md:bottom-6 right-5 flex flex-col items-end gap-2">
+    <div className="fixed z-40 bottom-[88px] md:bottom-6 right-5 flex flex-col items-end gap-2 max-[360px]:inset-0 max-[360px]:bottom-auto max-[360px]:right-auto max-[360px]:flex max-[360px]:items-center max-[360px]:justify-center">
       {mostrarSaludo && !abierto && (
-        <div className="animate-fade-in mb-1 max-w-[220px] rounded-2xl rounded-br-sm border border-border bg-card/95 backdrop-blur px-3 py-2 text-xs text-foreground shadow-xl">
+        <div className="animate-fade-in mb-1 max-w-[220px] rounded-2xl rounded-br-sm border border-border bg-card/95 backdrop-blur px-3 py-2 text-xs text-foreground shadow-xl max-[360px]:hidden">
           <span aria-hidden className="mr-1">💬</span>
           {saludo}
         </div>
