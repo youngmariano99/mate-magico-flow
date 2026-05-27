@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { BarChart3, Sparkles, X } from "lucide-react";
+import { AlertTriangle, BarChart3, Gauge, Sparkles, Target, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/auth/AuthProvider";
 import {
@@ -16,6 +16,11 @@ import { InputMagico } from "@/components/dashboard/InputMagico";
 import { ResumenSemanalIA } from "@/components/dashboard/ResumenSemanalIA";
 import { MateBotIcon, type EstadoMateBot } from "./MateBotIcon";
 import { useManejarConfirmacionMagica } from "@/hooks/useManejarConfirmacionMagica";
+import {
+  useConsultasAsistente,
+  type RespuestaConsulta,
+  type TipoConsulta,
+} from "@/hooks/useConsultasAsistente";
 
 /**
  * MateBotAvatar — FAB global que concentra TODA la superficie de IA
