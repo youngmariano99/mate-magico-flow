@@ -50,8 +50,19 @@ export const MateBotAvatar = () => {
   const [estado, setEstado] = useState<EstadoMateBot>("idle");
   const [mostrarSaludo, setMostrarSaludo] = useState(false);
   const [indiceSaludo, setIndiceSaludo] = useState(0);
+  const [respuesta, setRespuesta] = useState<RespuestaConsulta | null>(null);
+  const { responder } = useConsultasAsistente();
 
   const saludo = useMemo(() => SALUDOS[indiceSaludo % SALUDOS.length], [indiceSaludo]);
+
+  const ejecutarConsulta = useCallback(
+    (tipo: TipoConsulta) => setRespuesta(responder(tipo)),
+    [responder],
+  );
+
+  useEffect(() => {
+    if (!abierto) setRespuesta(null);
+  }, [abierto]);
 
   // Mostrar el bocadillo de saludo cada ~22 s cuando la consola está cerrada.
   useEffect(() => {
